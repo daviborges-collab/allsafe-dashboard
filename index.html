@@ -118,7 +118,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/1xJ-uF2dH-fkneAa4hV6vpds_WD2Dd_K4uMJ12LjZxRc/export?format=csv&sheet=vendas%20mes';
-const STATUS_OK = ['ativo','pendente de análise','autorizado'];
+// Normaliza texto removendo acentos para comparação robusta
+function normalizar(s) {
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+const STATUS_OK_NORM = ['ativo','pendente de analise','autorizado'];
 const IGNORAR   = ['interna','autocello','interno sp'];
 const EQ_CFG = {
   'João':     {cor:'#3535C0', bg:'#EEEEFF'},
@@ -147,9 +151,9 @@ function parseVal(v){
 }
 
 function getEq(s){
-  const l=String(s||'').toLowerCase();
+  const l=normalizar(s);
   if(IGNORAR.some(ig=>l.includes(ig)))return null;
-  if(l.includes('joão')||l.includes('joao'))return 'João';
+  if(l.includes('joao')||l.includes('joao'))return 'João';
   if(l.includes('bernardo'))return 'Bernardo';
   if(l.includes('renata'))return 'Renata';
   if(l.includes('agger'))return 'Agger';
@@ -166,7 +170,7 @@ async function fetchData(){
 }
 
 function process(rows){
-  const valid=rows.filter(r=>STATUS_OK.includes(String(r[0]||'').trim().toLowerCase()));
+  const valid=rows.filter(r=>STATUS_OK_NORM.includes(normalizar(r[0])));
   let tot=0,totVal=0;
   const byEq={'João':{v:0,val:0},'Bernardo':{v:0,val:0},'Renata':{v:0,val:0},'Agger':{v:0,val:0}};
   const byEst={},byEstEq={},byCon={};
@@ -199,7 +203,7 @@ function process(rows){
   };
 }
 
-function render(d){
+function render(d, rows){
   const estados=Object.entries(d.byEst).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([uf])=>uf);
 
   const eqCards=['João','Bernardo','Renata','Agger'].map(n=>{
@@ -239,7 +243,7 @@ function render(d){
       <div class="kpi kpi-dark">
         <div class="kpi-label">Total de vendas</div>
         <div class="kpi-value">${fmtN(d.tot)}</div>
-        <div class="kpi-sub">Ativo · Pendente · Autorizado</div>
+        <div class="kpi-sub">Ativo · Pendente · Autorizado<br><span style="font-size:10px;opacity:.5">${rows.length} linhas na planilha</span></div>
         <div class="kpi-deco">📋</div>
       </div>
       <div class="kpi kpi-roxo">
@@ -327,7 +331,7 @@ async function refresh(){
   try{
     document.getElementById('ts').textContent='Atualizando...';
     const rows=await fetchData();
-    render(process(rows));
+    render(process(rows), rows);
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
   }catch(e){
     document.getElementById('root').innerHTML=
