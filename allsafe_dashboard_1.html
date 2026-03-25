@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allsafe — Painel de Vendas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --roxo:#5353E9; --rosa:#F7B2F5; --azul:#93ADFC;
+    --dark:#210B4E; --limao:#DFF44C; --menta:#AFF9E4;
+    --bg:#F4F4F4; --white:#FFFFFF; --borda:#E4E4E4;
+    --texto:#210B4E; --sub:#7B7B9A;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--texto); min-height:100vh; }
+
+  .header { background:var(--dark); padding:0 2rem; height:60px; display:flex; align-items:center; justify-content:space-between; }
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .logo { background:var(--roxo); color:#fff; font-size:11px; font-weight:800; letter-spacing:.12em; padding:5px 12px; border-radius:6px; }
+  .header h1 { font-size:15px; font-weight:600; color:#fff; }
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .live { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:var(--menta); }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--menta); animation:blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .ts { font-size:11px; color:#7B8FA8; }
+  .btn { background:transparent; border:1px solid #3a3a6a; border-radius:6px; color:var(--sub); font-size:12px; padding:5px 12px; cursor:pointer; font-family:inherit; transition:all .15s; }
+  .btn:hover { background:#2d2d5e; color:#fff; }
+
+  .page { max-width:1280px; margin:0 auto; padding:1.5rem 2rem 3rem; }
+
+  .kpi-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:1.5rem; }
+  .kpi { border-radius:14px; padding:1.5rem; position:relative; overflow:hidden; }
+  .kpi-dark  { background:var(--dark); }
+  .kpi-roxo  { background:var(--roxo); }
+  .kpi-menta { background:var(--menta); }
+  .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; }
+  .kpi-dark  .kpi-label { color:var(--azul); }
+  .kpi-roxo  .kpi-label { color:var(--rosa); }
+  .kpi-menta .kpi-label { color:#0A6B54; }
+  .kpi-value { font-size:34px; font-weight:800; line-height:1; margin-bottom:6px; }
+  .kpi-dark  .kpi-value { color:var(--limao); }
+  .kpi-roxo  .kpi-value { color:#fff; font-size:24px; }
+  .kpi-menta .kpi-value { color:var(--dark); font-size:22px; }
+  .kpi-sub { font-size:11px; }
+  .kpi-dark  .kpi-sub { color:#5a5a9a; }
+  .kpi-roxo  .kpi-sub { color:rgba(255,255,255,.6); }
+  .kpi-menta .kpi-sub { color:#0A6B54; opacity:.7; }
+  .kpi-deco { position:absolute; right:-8px; bottom:-8px; font-size:70px; opacity:.07; line-height:1; pointer-events:none; }
+
+  .main-grid { display:grid; grid-template-columns:280px 1fr; gap:14px; margin-bottom:14px; }
+  .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  .card { background:var(--white); border-radius:14px; border:1px solid var(--borda); padding:1.25rem; }
+  .card-title { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sub); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+  .card-title::before { content:''; display:inline-block; width:3px; height:12px; background:var(--roxo); border-radius:2px; }
+
+  .eq-item { display:flex; align-items:center; padding:10px 12px; border-radius:10px; margin-bottom:8px; gap:10px; }
+  .eq-item:last-child { margin-bottom:0; }
+  .eq-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .eq-nome { font-size:13px; font-weight:600; flex:1; }
+  .eq-vendas { font-size:20px; font-weight:800; }
+  .eq-val { font-size:10px; font-weight:500; opacity:.7; text-align:right; }
+
+  .chart-wrap { position:relative; width:100%; }
+
+  .agger-card { background:var(--dark); border-radius:14px; padding:1.25rem; }
+  .agger-title { font-size:10px; font-weight:700; letter-spacing:.12em; color:var(--roxo); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+  .agger-title::before { content:'◆'; font-size:8px; }
+  .agger-kpis { display:flex; gap:24px; margin-bottom:16px; }
+  .agger-lbl { font-size:10px; color:#6060A0; margin-bottom:3px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+  .agger-val { font-size:28px; font-weight:800; color:var(--limao); }
+  .agger-val.sm { font-size:16px; color:var(--menta); }
+  .agger-pills { display:flex; flex-wrap:wrap; gap:7px; }
+  .agger-pill { background:rgba(83,83,233,.2); border:1px solid rgba(83,83,233,.4); border-radius:20px; padding:4px 12px; font-size:12px; color:var(--azul); display:flex; gap:6px; align-items:center; }
+  .agger-pill b { font-weight:700; color:#fff; }
+
+  .rank-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .rank-table th { text-align:left; padding:6px 8px; font-size:10px; font-weight:700; letter-spacing:.06em; color:var(--sub); text-transform:uppercase; border-bottom:2px solid var(--borda); }
+  .rank-table td { padding:8px 8px; border-bottom:1px solid #F0F0F0; vertical-align:middle; }
+  .rank-table tr:last-child td { border-bottom:none; }
+  .rank-table tbody tr:hover td { background:#FAFAFF; }
+  .pos { font-size:11px; font-weight:700; color:var(--sub); min-width:22px; display:inline-block; }
+  .p1{color:#C8900A;font-size:15px} .p2{color:#888;font-size:15px} .p3{color:#8B5E3C;font-size:15px}
+  .badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap; }
+  .tr { text-align:right; } .fw { font-weight:700; }
+
+  .state-msg { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem; color:var(--sub); gap:12px; font-size:14px; }
+  .state-msg .ico { font-size:32px; }
+  .err { color:#C0392B; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--sub); }
+  .legend-sq { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+  @media(max-width:900px){ .main-grid,.bottom-grid{grid-template-columns:1fr} .kpi-row{grid-template-columns:1fr 1fr} }
+  @media(max-width:500px){ .kpi-row{grid-template-columns:1fr} .page{padding:1rem} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo">ALLSAFE</span>
+    <h1>Painel de Vendas</h1>
+  </div>
+  <div class="header-right">
+    <div class="live"><div class="live-dot"></div>Ao vivo</div>
+    <span class="ts" id="ts">—</span>
+    <button class="btn" onclick="refresh()">↻ Atualizar</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="root"><div class="state-msg"><div class="ico">⏳</div>Buscando dados da planilha...</div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/1xJ-uF2dH-fkneAa4hV6vpds_WD2Dd_K4uMJ12LjZxRc/export?format=csv&sheet=vendas%20mes';
+const STATUS_OK = ['ativo','pendente de análise','autorizado'];
+const IGNORAR   = ['interna','autocello','interno sp'];
+const EQ_CFG = {
+  'João':     {cor:'#3535C0', bg:'#EEEEFF'},
+  'Bernardo': {cor:'#0A6B54', bg:'#E0FDF6'},
+  'Renata':   {cor:'#8B1A90', bg:'#FDE8FD'},
+  'Agger':    {cor:'#5C6200', bg:'#F6FBDA'},
+};
+let chartInst = null;
+
+function parseCSV(txt) {
+  return txt.split('\n').slice(1).map(line => {
+    const cols=[]; let inQ=false, cur='';
+    for(const ch of line){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=ch;
+    }
+    cols.push(cur.trim());
+    return cols;
+  }).filter(r=>r.length>5);
+}
+
+function parseVal(v){
+  if(!v)return 0;
+  return parseFloat(String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim())||0;
+}
+
+function getEq(s){
+  const l=String(s||'').toLowerCase();
+  if(IGNORAR.some(ig=>l.includes(ig)))return null;
+  if(l.includes('joão')||l.includes('joao'))return 'João';
+  if(l.includes('bernardo'))return 'Bernardo';
+  if(l.includes('renata'))return 'Renata';
+  if(l.includes('agger'))return 'Agger';
+  return null;
+}
+
+function fmtR(n){return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtN(n){return Math.round(n).toLocaleString('pt-BR');}
+
+async function fetchData(){
+  const r=await fetch(CSV_URL);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return parseCSV(await r.text());
+}
+
+function process(rows){
+  const valid=rows.filter(r=>STATUS_OK.includes(String(r[0]||'').trim().toLowerCase()));
+  let tot=0,totVal=0;
+  const byEq={'João':{v:0,val:0},'Bernardo':{v:0,val:0},'Renata':{v:0,val:0},'Agger':{v:0,val:0}};
+  const byEst={},byEstEq={},byCon={};
+
+  valid.forEach(r=>{
+    const val=parseVal(r[6]);
+    const eq=getEq(r[4]);
+    const uf=String(r[11]||'').trim().toUpperCase();
+    const con=String(r[5]||'').trim();
+    tot++;totVal+=val;
+    if(eq&&byEq[eq]){byEq[eq].v++;byEq[eq].val+=val;}
+    if(uf){
+      byEst[uf]=(byEst[uf]||0)+1;
+      if(eq){if(!byEstEq[uf])byEstEq[uf]={};byEstEq[uf][eq]=(byEstEq[uf][eq]||0)+1;}
+    }
+    if(eq&&con&&con!=='null'){
+      if(!byCon[con])byCon[con]={v:0,val:0,eq};
+      byCon[con].v++;byCon[con].val+=val;
+    }
+  });
+
+  const aggrEst=Object.entries(byEstEq)
+    .map(([uf,eq])=>([uf,eq['Agger']||0]))
+    .filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  return{
+    tot,totVal,ticket:tot?totVal/tot:0,
+    byEq,byEst,byEstEq,aggrEst,
+    ranking:Object.entries(byCon).sort((a,b)=>b[1].v-a[1].v)
+  };
+}
+
+function render(d){
+  const estados=Object.entries(d.byEst).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([uf])=>uf);
+
+  const eqCards=['João','Bernardo','Renata','Agger'].map(n=>{
+    const s=d.byEq[n],c=EQ_CFG[n];
+    return `<div class="eq-item" style="background:${c.bg}">
+      <span class="eq-dot" style="background:${c.cor}"></span>
+      <span class="eq-nome" style="color:${c.cor}">${n}</span>
+      <div style="text-align:right">
+        <div class="eq-vendas" style="color:${c.cor}">${s.v}</div>
+        <div class="eq-val" style="color:${c.cor}">${fmtR(s.val)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const aggrPills=d.aggrEst.length
+    ?d.aggrEst.map(([uf,cnt])=>`<div class="agger-pill"><b>${cnt}</b>${uf}</div>`).join('')
+    :'<span style="font-size:12px;color:#404070;opacity:.6">Sem dados no período</span>';
+
+  const medals=['🥇','🥈','🥉'];
+  const rankRows=d.ranking.slice(0,30).map(([nome,info],i)=>{
+    const pos=i+1,pc=pos<=3?`p${pos}`:'',c=EQ_CFG[info.eq]||{cor:'#444',bg:'#F5F5F5'};
+    return `<tr>
+      <td><span class="pos ${pc}">${pos<=3?medals[i]:pos}</span></td>
+      <td class="fw">${nome}</td>
+      <td><span class="badge" style="background:${c.bg};color:${c.cor}">${info.eq}</span></td>
+      <td class="tr fw" style="color:#5353E9">${info.v}</td>
+      <td class="tr" style="color:#7B7B9A;font-size:11px">${fmtR(info.val)}</td>
+    </tr>`;
+  }).join('');
+
+  const legendHTML=['João','Bernardo','Renata','Agger'].map(n=>
+    `<span class="legend-item"><span class="legend-sq" style="background:${EQ_CFG[n].cor}"></span>${n}</span>`
+  ).join('');
+
+  document.getElementById('root').innerHTML=`
+    <div class="kpi-row">
+      <div class="kpi kpi-dark">
+        <div class="kpi-label">Total de vendas</div>
+        <div class="kpi-value">${fmtN(d.tot)}</div>
+        <div class="kpi-sub">Ativo · Pendente · Autorizado</div>
+        <div class="kpi-deco">📋</div>
+      </div>
+      <div class="kpi kpi-roxo">
+        <div class="kpi-label">Mensalidade total</div>
+        <div class="kpi-value">${fmtR(d.totVal)}</div>
+        <div class="kpi-sub">Soma valor adesão</div>
+        <div class="kpi-deco">💰</div>
+      </div>
+      <div class="kpi kpi-menta">
+        <div class="kpi-label">Ticket médio</div>
+        <div class="kpi-value">${fmtR(d.ticket)}</div>
+        <div class="kpi-sub">Por contrato</div>
+        <div class="kpi-deco">📈</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-title">Equipes de venda</div>
+        ${eqCards}
+      </div>
+      <div class="card">
+        <div class="card-title">Vendas por estado</div>
+        <div class="chart-wrap" style="height:${Math.max(220,estados.length*34)}px">
+          <canvas id="chartEst"></canvas>
+        </div>
+        <div class="legend">${legendHTML}</div>
+      </div>
+    </div>
+
+    <div class="bottom-grid">
+      <div class="agger-card">
+        <div class="agger-title">Agger</div>
+        <div class="agger-kpis">
+          <div>
+            <div class="agger-lbl">Total vendas</div>
+            <div class="agger-val">${d.byEq['Agger'].v}</div>
+          </div>
+          <div>
+            <div class="agger-lbl">Mensalidade</div>
+            <div class="agger-val sm">${fmtR(d.byEq['Agger'].val)}</div>
+          </div>
+        </div>
+        <div class="agger-lbl" style="margin-bottom:8px">Por estado</div>
+        <div class="agger-pills">${aggrPills}</div>
+      </div>
+
+      <div class="card" style="overflow-x:auto">
+        <div class="card-title">Ranking de vendedores</div>
+        <table class="rank-table">
+          <thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Mensalidade</th></tr></thead>
+          <tbody>${rankRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  const ctx=document.getElementById('chartEst');
+  if(ctx){
+    chartInst=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:estados,
+        datasets:['João','Bernardo','Renata','Agger'].map(n=>({
+          label:n,
+          data:estados.map(uf=>(d.byEstEq[uf]||{})[n]||0),
+          backgroundColor:EQ_CFG[n].cor+'CC',
+          borderRadius:4,
+        }))
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+        scales:{
+          x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},
+          y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:12,weight:'600'}}}
+        }
+      }
+    });
+  }
+}
+
+async function refresh(){
+  try{
+    document.getElementById('ts').textContent='Atualizando...';
+    const rows=await fetchData();
+    render(process(rows));
+    document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
+  }catch(e){
+    document.getElementById('root').innerHTML=
+      `<div class="state-msg err"><div class="ico">❌</div>
+       Erro ao carregar dados.<br><small>${e.message}</small><br><br>
+       Verifique: Compartilhar → Qualquer pessoa com o link → Leitor</div>`;
+  }
+}
+
+refresh();
+setInterval(refresh,60000);
+</script>
+</body>
+</html>
