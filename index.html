@@ -124,7 +124,8 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
 /* TABELAS */
 .it{width:100%;border-collapse:collapse;font-size:12px}
 .it th{text-align:left;padding:6px 10px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;border-bottom:2px solid var(--borda);white-space:nowrap;background:#fff}
-.it td{padding:7px 10px;border-bottom:1px solid #F0F0F0;vertical-align:middle}
+.it td{padding:7px 10px;border-bottom:1px solid #F0F0F0;vertical-align:middle;text-align:center}
+.it td:first-child{text-align:left}
 .it tr:last-child td{border-bottom:none}
 .it tbody tr:hover td{background:#FAFAFF}
 .it tfoot td{border-top:2px solid var(--borda);font-weight:700;background:#F8F8FC;padding:7px 10px}
@@ -340,10 +341,12 @@ function procInt(rows,aba){
   });
 
   // Tipos únicos de negociação
+  // Se todos forem 'Não informado', a coluna não existe nessa aba
   const tiposSet=new Set();
   v.forEach(r=>tiposSet.add(r.tipoNeg||'Não informado'));
-  const tipos=[...tiposSet].filter(t=>t&&t!=='Não informado').sort();
-  if(tiposSet.has('Não informado'))tipos.push('Não informado');
+  const todosNaoInfo=[...tiposSet].every(t=>t==='Não informado');
+  const tipos=todosNaoInfo?[]:([...tiposSet].filter(t=>t&&t!=='Não informado').sort());
+  if(!todosNaoInfo&&tiposSet.has('Não informado'))tipos.push('Não informado');
 
   // Categorias únicas
   const catsSet=new Set();
@@ -432,14 +435,14 @@ function rendInt(d){
   }).join('');
 
   // Tabela 3: tipo de negociação (pivô: corretor x tipo, com totais)
-  const tpHd=d.tipos.map(t=>'<th class="tr">'+t+'</th>').join('');
-  const tpRows=d.rank.map(([nm])=>{
-    const cells=d.tipos.map(t=>'<td class="tr">'+(d.porCorTipo[nm]&&d.porCorTipo[nm][t]?d.porCorTipo[nm][t]:'-')+'</td>').join('');
+  const tpHd=d.tipos.length?d.tipos.map(t=>'<th style="text-align:center">'+t+'</th>').join(''):'';
+  const tpRows=d.tipos.length?d.rank.map(([nm])=>{
+    const cells=d.tipos.map(t=>'<td>'+(d.porCorTipo[nm]&&d.porCorTipo[nm][t]?d.porCorTipo[nm][t]:'-')+'</td>').join('');
     const rowTot=d.tipos.reduce((s,t)=>s+((d.porCorTipo[nm]||{})[t]||0),0);
-    return '<tr><td class="fw">'+nm+'</td>'+cells+'<td class="tr fw" style="color:#5353E9">'+rowTot+'</td></tr>';
-  }).join('');
+    return '<tr><td class="fw">'+nm+'</td>'+cells+'<td class="fw" style="color:#5353E9">'+rowTot+'</td></tr>';
+  }).join(''):'';
   // Totais por tipo (última linha)
-  const tpFoot=d.tipos.map(t=>{const s=d.rank.reduce((acc,[nm])=>acc+((d.porCorTipo[nm]||{})[t]||0),0);return '<td class="tr">'+s+'</td>';}).join('');
+  const tpFoot=d.tipos.length?d.tipos.map(t=>{const s=d.rank.reduce((acc,[nm])=>acc+((d.porCorTipo[nm]||{})[t]||0),0);return '<td>'+s+'</td>';}).join(''):'';
   const tpFootTot=d.rank.reduce((s,[nm])=>s+d.tipos.reduce((ss,t)=>ss+((d.porCorTipo[nm]||{})[t]||0),0),0);
 
   document.getElementById('root').innerHTML=
@@ -476,8 +479,9 @@ function rendInt(d){
     // Tabela tipo negociação
     '<div class="sectit">Por tipo de negociação</div>'+
     '<div class="card" style="overflow-x:auto;margin-bottom:16px">'+
-      '<table class="it"><thead><tr><th>Corretor</th>'+tpHd+'<th class="tr">Total</th></tr></thead><tbody>'+tpRows+'</tbody>'+
-      '<tfoot><tr><td class="fw">Total</td>'+tpFoot+'<td class="tr fw" style="color:#5353E9">'+tpFootTot+'</td></tr></tfoot></table>'+
+      (d.tipos.length===0
+        ? '<div style="padding:1rem;color:var(--sub);font-size:13px">⚠️ A coluna Tipo de negociação não existe nessa aba. Adicione-a à planilha para visualizar.</div>'
+        : '<table class="it"><thead><tr><th>Corretor</th>'+tpHd+'<th style="text-align:center;color:#5353E9">Total</th></tr></thead><tbody>'+tpRows+'</tbody><tfoot><tr><td class="fw">Total</td>'+tpFoot+'<td class="fw" style="color:#5353E9">'+tpFootTot+'</td></tr></tfoot></table>')+
     '</div>';
 
   if(GV){GV.destroy();GV=null;}
