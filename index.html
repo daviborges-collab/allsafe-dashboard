@@ -25,13 +25,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 .btn-sm{background:transparent;border:1px solid #3a3a6a;border-radius:6px;color:var(--sub);font-size:11px;padding:4px 10px;cursor:pointer;font-family:inherit;transition:all .15s}
 .btn-sm:hover{background:#2d2d5e;color:#fff}
 select.mes-select{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;color:#93ADFC;font-size:11px;padding:4px 8px;cursor:pointer;font-family:inherit}
-/* TOGGLE EXTERNO / INTERNO */
 .toggle-wrap{display:flex;background:#111133;border-radius:8px;padding:3px;gap:2px}
 .toggle-btn{padding:5px 16px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;color:#7B8FA8;background:transparent}
 .toggle-btn.active{background:var(--roxo);color:#fff}
-/* PAGE */
 .page{max-width:1280px;margin:0 auto;padding:1.25rem 1.5rem 3rem}
-/* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem}
 .kpi{border-radius:14px;padding:1.25rem 1.5rem;position:relative;overflow:hidden}
 .kpi-dark{background:var(--dark)}.kpi-roxo{background:var(--roxo)}.kpi-menta{background:var(--menta)}
@@ -42,13 +39,11 @@ select.mes-select{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;
 .kpi-sub{font-size:11px}
 .kpi-dark .kpi-sub{color:#5a5a9a}.kpi-roxo .kpi-sub{color:rgba(255,255,255,.6)}.kpi-menta .kpi-sub{color:#0A6B54;opacity:.7}
 .kpi-deco{position:absolute;right:-8px;bottom:-8px;font-size:64px;opacity:.07;line-height:1;pointer-events:none}
-/* GRID */
 .main-grid{display:grid;grid-template-columns:270px 1fr;gap:12px;margin-bottom:12px}
 .bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .card{background:var(--white);border-radius:14px;border:1px solid var(--borda);padding:1.25rem}
 .card-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .card-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--roxo);border-radius:2px}
-/* EQUIPE CARDS */
 .eq-item{display:flex;align-items:center;padding:9px 11px;border-radius:10px;margin-bottom:7px;gap:9px}
 .eq-item:last-child{margin-bottom:0}
 .eq-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
@@ -56,7 +51,6 @@ select.mes-select{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;
 .eq-vendas{font-size:18px;font-weight:800}
 .eq-val{font-size:10px;font-weight:500;opacity:.7;text-align:right}
 .chart-wrap{position:relative;width:100%}
-/* AGGER */
 .agger-card{background:var(--dark);border-radius:14px;padding:1.25rem}
 .agger-title{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--roxo);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .agger-title::before{content:'◆';font-size:8px}
@@ -67,7 +61,6 @@ select.mes-select{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;
 .agger-pills{display:flex;flex-wrap:wrap;gap:6px}
 .agger-pill{background:rgba(83,83,233,.2);border:1px solid rgba(83,83,233,.4);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--azul);display:flex;gap:5px;align-items:center}
 .agger-pill b{font-weight:700;color:#fff}
-/* RANKING */
 .rank-table{width:100%;border-collapse:collapse;font-size:12px}
 .rank-table th{text-align:left;padding:5px 7px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;border-bottom:2px solid var(--borda)}
 .rank-table td{padding:7px 7px;border-bottom:1px solid #F0F0F0;vertical-align:middle}
@@ -85,31 +78,36 @@ select.mes-select{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;
 .destaque-card{background:linear-gradient(135deg,var(--roxo),#3535C0);border-radius:14px;padding:1.25rem;color:#fff}
 .destaque-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rosa);margin-bottom:10px}
 .destaque-nome{font-size:20px;font-weight:800;margin-bottom:12px;color:#fff}
-.destaque-stats{display:flex;gap:20px}
+.destaque-stats{display:flex;gap:20px;flex-wrap:wrap}
 .destaque-stat-label{font-size:10px;color:rgba(255,255,255,.6);margin-bottom:2px}
 .destaque-stat-value{font-size:16px;font-weight:700;color:#fff}
+.tend-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .tendencia-card{background:var(--dark);border-radius:14px;padding:1.25rem}
 .tend-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--azul);margin-bottom:12px}
 .tend-projecao{font-size:26px;font-weight:800;color:var(--limao);margin-bottom:4px}
 .tend-sub{font-size:11px;color:#5a5a9a}
-.tend-detalhe{font-size:11px;color:#7B8FA8;margin-top:8px;line-height:1.6}
-/* VELOCIMETRO */
+.tend-detalhe{font-size:11px;color:#7B8FA8;margin-top:8px;line-height:1.8}
+.sugestao-card{background:#1a1a3e;border:1px solid rgba(83,83,233,.3);border-radius:14px;padding:1.25rem;display:flex;flex-direction:column;justify-content:center}
+.sugestao-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rosa);margin-bottom:10px}
+.sugestao-value{font-size:32px;font-weight:800;color:var(--limao);margin-bottom:4px}
+.sugestao-label{font-size:11px;color:#5a5a9a}
+.sugestao-detalhe{font-size:11px;color:#7B8FA8;margin-top:10px;line-height:1.8}
 .veloci-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:12px}
 .veloci-info{text-align:center;margin-top:6px}
 .veloci-atual{font-size:28px;font-weight:800;color:var(--limao)}
 .veloci-meta{font-size:12px;color:#5a5a9a}
 .veloci-projecao{font-size:12px;color:var(--menta);margin-top:4px;font-weight:600}
-/* TABELA INTERNA */
 .int-table{width:100%;border-collapse:collapse;font-size:12px}
 .int-table th{text-align:left;padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;border-bottom:2px solid var(--borda);white-space:nowrap}
 .int-table td{padding:7px 8px;border-bottom:1px solid #F0F0F0;vertical-align:middle}
 .int-table tr:last-child td{border-bottom:none}
 .int-table tbody tr:hover td{background:#FAFAFF}
-/* STATE */
+.sec-title{font-size:13px;font-weight:700;color:var(--dark);margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';display:inline-block;width:4px;height:16px;background:var(--roxo);border-radius:2px}
 .state-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem;color:var(--sub);gap:12px;font-size:14px;text-align:center}
 .state-msg .ico{font-size:32px}
 .err{color:#C0392B}
-@media(max-width:900px){.main-grid,.bottom-grid,.int-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.main-grid,.bottom-grid,.int-grid,.tend-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
 @media(max-width:500px){.kpi-row{grid-template-columns:1fr}.page{padding:1rem}}
 </style>
 </head>
@@ -142,39 +140,21 @@ select.mes-select{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;
 // CONFIGURAÇÕES — EDITE AQUI
 // ============================================================
 
-// Meses disponíveis na planilha (adicione novos meses aqui)
 const MESES = [
-  'Janeiro/2026',
-  'Fevereiro/2026',
-  'Março/2026',
-  'Abril/2026',
-  'Maio/2026',
-  'Junho/2026',
-  'Julho/2026',
-  'Agosto/2026',
-  'Setembro/2026',
-  'Outubro/2026',
-  'Novembro/2026',
-  'Dezembro/2026',
+  'Janeiro/2026','Fevereiro/2026','Março/2026','Abril/2026',
+  'Maio/2026','Junho/2026','Julho/2026','Agosto/2026',
+  'Setembro/2026','Outubro/2026','Novembro/2026','Dezembro/2026',
 ];
 
-// Meta mensal do INTERNO por mês (edite aqui mês a mês)
+// Meta mensal do INTERNO — edite mês a mês
 const METAS = {
-  'Janeiro/2026':   130,
-  'Fevereiro/2026': 130,
-  'Março/2026':     130,
-  'Abril/2026':     130,
-  'Maio/2026':      130,
-  'Junho/2026':     130,
-  'Julho/2026':     130,
-  'Agosto/2026':    130,
-  'Setembro/2026':  130,
-  'Outubro/2026':   130,
-  'Novembro/2026':  130,
-  'Dezembro/2026':  130,
+  'Janeiro/2026':130,'Fevereiro/2026':130,'Março/2026':130,
+  'Abril/2026':130,'Maio/2026':130,'Junho/2026':130,
+  'Julho/2026':130,'Agosto/2026':130,'Setembro/2026':130,
+  'Outubro/2026':130,'Novembro/2026':130,'Dezembro/2026':130,
 };
 
-// Feriados nacionais brasileiros (formato YYYY-MM-DD) — atualize anualmente
+// Feriados nacionais 2026 (formato YYYY-MM-DD) — atualize anualmente
 const FERIADOS = [
   '2026-01-01','2026-04-03','2026-04-21','2026-05-01',
   '2026-06-04','2026-09-07','2026-10-12','2026-11-02',
@@ -185,11 +165,10 @@ const FERIADOS = [
 // PALAVRAS-CHAVE DAS EQUIPES — EDITE AQUI SE NECESSÁRIO
 // ============================================================
 
-// INTERNO: contratos cuja Equipe de Venda contenha qualquer uma dessas palavras
+// INTERNO: qualquer contrato cuja Equipe de Venda contenha estas palavras
 const KW_INTERNO = ['interna', 'autocello', 'macro', 'interno'];
 
-// EXTERNO — equipes reconhecidas por palavra-chave na coluna E
-// Contratos que NÃO são interno e NÃO se encaixam abaixo ficam fora do ranking mas entram no total
+// EXTERNO: equipes reconhecidas por palavra-chave
 const KW_EXTERNO = {
   Joao:     ['joao', 'joão'],
   Bernardo: ['bernardo'],
@@ -226,116 +205,62 @@ function parseValor(v){
 }
 function fmtR(n){return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtN(n){return Math.round(n).toLocaleString('pt-BR');}
-
-function ehInterno(equipeStr){
-  const l = norm(equipeStr);
-  return KW_INTERNO.some(kw => l.includes(kw));
-}
-function detectarEquipeExt(equipeStr){
-  const l = norm(equipeStr);
-  for(const [k, kws] of Object.entries(KW_EXTERNO)){
-    if(kws.some(kw => l.includes(kw))) return k;
-  }
-  return null;
-}
+function ehInterno(e){const l=norm(e);return KW_INTERNO.some(kw=>l.includes(kw));}
+function detectarEquipeExt(e){const l=norm(e);for(const[k,kws]of Object.entries(KW_EXTERNO)){if(kws.some(kw=>l.includes(kw)))return k;}return null;}
 
 // ============================================================
 // DIAS ÚTEIS
 // ============================================================
-function ehDiaUtil(date){
-  const d = date.getDay();
-  if(d===0||d===6) return false;
-  const str = date.toISOString().slice(0,10);
-  return !FERIADOS.includes(str);
+function ehDiaUtil(d){
+  const dw=d.getDay();if(dw===0||dw===6)return false;
+  return !FERIADOS.includes(d.toISOString().slice(0,10));
 }
-function diasUteisNoMes(ano, mes){
-  // mes: 0-indexed
-  const dias = [];
-  const d = new Date(ano, mes, 1);
-  while(d.getMonth()===mes){
-    if(ehDiaUtil(new Date(d))) dias.push(new Date(d));
-    d.setDate(d.getDate()+1);
-  }
+function diasUteisNoMes(ano,mes){
+  const dias=[],d=new Date(ano,mes,1);
+  while(d.getMonth()===mes){if(ehDiaUtil(new Date(d)))dias.push(new Date(d));d.setDate(d.getDate()+1);}
   return dias;
-}
-function diasUteisParciais(ano, mes, hoje){
-  return diasUteisNoMes(ano, mes).filter(d => d <= hoje);
-}
-function diasUteisRestantes(ano, mes, hoje){
-  return diasUteisNoMes(ano, mes).filter(d => d > hoje);
 }
 
 // ============================================================
 // MÊS ATUAL
 // ============================================================
 function nomeMesAtual(){
-  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const agora = new Date();
-  return `${meses[agora.getMonth()]}/${agora.getFullYear()}`;
+  const m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const a=new Date();return `${m[a.getMonth()]}/${a.getFullYear()}`;
 }
-
-function normMes(s){
-  // Remove acentos para comparar
-  return norm(s).replace(/\//g,'/');
+function encontrarMes(n){
+  const nn=norm(n);
+  return MESES.find(m=>norm(m)===nn)||MESES.find(m=>norm(m).split('/')[0]===nn.split('/')[0])||MESES[2];
 }
-
-function encontrarMes(nomeBuscado){
-  const n = normMes(nomeBuscado);
-  return MESES.find(m => normMes(m) === n) || MESES.find(m => normMes(m).startsWith(n.split('/')[0])) || MESES[0];
-}
-
-function csvUrlParaMes(nomeAba){
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(nomeAba)}`;
-}
+function csvUrl(aba){return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(aba)}`;}
 
 // ============================================================
-// FETCH
+// FETCH CSV
 // ============================================================
 function parseCSV(txt){
-  return txt.split('\n').slice(1).map(linha=>{
-    const cols=[]; let inQ=false, cur='';
-    for(const c of linha){
-      if(c==='"'){inQ=!inQ;}
-      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
-      else cur+=c;
-    }
-    cols.push(cur.trim());
-    return cols;
+  return txt.split('\n').slice(1).map(l=>{
+    const c=[]; let inQ=false,cur='';
+    for(const ch of l){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){c.push(cur.trim());cur='';}else cur+=ch;}
+    c.push(cur.trim());return c;
   }).filter(r=>r.length>=5);
 }
-
-async function buscarDados(nomeAba){
-  // Tenta o nome exato e variações sem acento
-  const variantes = [nomeAba, norm(nomeAba).replace(/\b\w/g,c=>c.toUpperCase())];
-  // Variações com/sem acento dos meses
-  const mapaAcento = {'marco':'março','fevereiro':'fevereiro','january':'janeiro'};
-  for(const v of variantes){
-    try{
-      const url = csvUrlParaMes(v);
-      const r = await fetch(url);
-      if(r.ok){
-        const txt = await r.text();
-        if(txt.includes(',')) return parseCSV(txt);
-      }
-    }catch(e){}
-  }
-  throw new Error(`Aba "${nomeAba}" não encontrada. Verifique se o nome está correto na planilha.`);
+async function buscarDados(aba){
+  const r=await fetch(csvUrl(aba));
+  if(r.ok){const t=await r.text();if(t.includes(','))return parseCSV(t);}
+  throw new Error(`Aba "${aba}" não encontrada. Verifique o nome na planilha.`);
 }
 
 // ============================================================
-// PROCESSAMENTO
+// PROCESSAMENTO EXTERNO
 // ============================================================
 function processarExterno(linhas){
-  const validos = linhas.filter(r=>STATUS_OK.includes(norm(r[0]))&&!ehInterno(r[4]));
+  const v=linhas.filter(r=>STATUS_OK.includes(norm(r[0]))&&!ehInterno(r[4]));
   let total=0,totVal=0;
   const porEq={Joao:{v:0,val:0},Bernardo:{v:0,val:0},Renata:{v:0,val:0},Agger:{v:0,val:0}};
   const porEst={},porEstEq={},porCon={};
-  validos.forEach(r=>{
-    const val=parseValor(r[6]);
-    const eqK=detectarEquipeExt(r[4]);
-    const uf=String(r[11]||'').trim().toUpperCase();
-    const con=String(r[5]||'').trim();
+  v.forEach(r=>{
+    const val=parseValor(r[6]),eqK=detectarEquipeExt(r[4]);
+    const uf=String(r[11]||'').trim().toUpperCase(),con=String(r[5]||'').trim();
     total++;totVal+=val;
     if(eqK&&porEq[eqK]){porEq[eqK].v++;porEq[eqK].val+=val;}
     if(uf){porEst[uf]=(porEst[uf]||0)+1;if(eqK){if(!porEstEq[uf])porEstEq[uf]={};porEstEq[uf][eqK]=(porEstEq[uf][eqK]||0)+1;}}
@@ -345,55 +270,64 @@ function processarExterno(linhas){
   return{total,totVal,ticket:total?totVal/total:0,porEq,porEst,porEstEq,aggrEst,ranking:Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v)};
 }
 
+// ============================================================
+// PROCESSAMENTO INTERNO
+// ============================================================
 function processarInterno(linhas, nomeAba){
-  const validos = linhas.filter(r=>STATUS_OK.includes(norm(r[0]))&&ehInterno(r[4]));
+  const v=linhas.filter(r=>STATUS_OK.includes(norm(r[0]))&&ehInterno(r[4]));
   let total=0,totVal=0;
   const porCon={};
-  validos.forEach(r=>{
+  v.forEach(r=>{
     const val=parseValor(r[6]);
     const con=String(r[5]||'').trim();
-    const tipo=String(r[17]||'').trim()||'—'; // coluna R (índice 17)
+    const tipo=String(r[17]||'').trim()||'—';   // col R = Tipo de negociação
+    const veiculo=String(r[15]||'').trim()||'—'; // col P = Tipo veículo
+    const uso=String(r[16]||'').trim()||'—';     // col Q = Tipo de Uso
     total++;totVal+=val;
     if(con&&con!=='null'){
-      if(!porCon[con])porCon[con]={v:0,val:0,tipo};
+      if(!porCon[con])porCon[con]={v:0,val:0,tipo,veiculo,uso};
       porCon[con].v++;porCon[con].val+=val;
     }
   });
 
-  // Tendência
-  const partes = nomeAba.split('/');
-  const mesesNome=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  const mIdx = mesesNome.indexOf(norm(partes[0]));
-  const ano = parseInt(partes[1])||new Date().getFullYear();
-  const hoje = new Date();
-  const eMesAtual = (hoje.getMonth()===mIdx && hoje.getFullYear()===ano);
-
-  let diasPassados=0, diasFaltam=0, projecao=total;
+  // Cálculo de dias úteis
+  const partes=nomeAba.split('/');
+  const mesesNorm=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const mIdx=mesesNorm.indexOf(norm(partes[0]));
+  const ano=parseInt(partes[1])||new Date().getFullYear();
+  const hoje=new Date();
+  const eMesAtual=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano);
+  let diasPassados=0,diasFaltam=0;
   if(mIdx>=0){
-    const diasUtil = diasUteisNoMes(ano, mIdx);
+    const todos=diasUteisNoMes(ano,mIdx);
     if(eMesAtual){
-      diasPassados = diasUteisParciais(ano,mIdx,hoje).length;
-      diasFaltam   = diasUteisRestantes(ano,mIdx,hoje).length;
-    } else if(hoje > new Date(ano, mIdx+1, 0)){
-      diasPassados = diasUtil.length;
-      diasFaltam   = 0;
+      diasPassados=todos.filter(d=>d<=hoje).length;
+      diasFaltam=todos.filter(d=>d>hoje).length;
+    } else if(hoje>new Date(ano,mIdx+1,0)){
+      diasPassados=todos.length;diasFaltam=0;
     } else {
-      diasPassados = 0;
-      diasFaltam   = diasUtil.length;
+      diasPassados=0;diasFaltam=todos.length;
     }
-    if(diasPassados>0) projecao = Math.round((total/diasPassados)*(diasPassados+diasFaltam));
   }
+  const projecao=diasPassados>0?Math.round((total/diasPassados)*(diasPassados+diasFaltam)):total;
+  const meta=METAS[nomeAba]||130;
+  const faltamMeta=Math.max(0,meta-total);
+  const vendDiaNecessaria=diasFaltam>0?(faltamMeta/diasFaltam):0;
+  const ritmoAtual=diasPassados>0?(total/diasPassados):0;
+  const topCon=Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v)[0];
+  const ranking=Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v);
+  ranking.forEach(([,info])=>{info.tendencia=diasPassados>0?Math.round((info.v/diasPassados)*(diasPassados+diasFaltam)):info.v;});
 
-  const meta = METAS[nomeAba]||METAS[Object.keys(METAS)[0]]||130;
-  const topCon = Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v)[0];
-  const ranking = Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v);
-
-  // Tendência individual
-  ranking.forEach(([,info])=>{
-    info.tendencia = diasPassados>0 ? Math.round((info.v/diasPassados)*(diasPassados+diasFaltam)) : info.v;
+  // Tabela 2: agrupamento por Tipo de negociação
+  const porTipo={};
+  v.forEach(r=>{
+    const tipo=String(r[17]||'').trim()||'Não informado';
+    const val=parseValor(r[6]);
+    if(!porTipo[tipo])porTipo[tipo]={v:0,val:0};
+    porTipo[tipo].v++;porTipo[tipo].val+=val;
   });
 
-  return{total,totVal,ticket:total?totVal/total:0,porCon,ranking,topCon,projecao,diasPassados,diasFaltam,meta};
+  return{total,totVal,ticket:total?totVal/total:0,porCon,ranking,topCon,projecao,diasPassados,diasFaltam,meta,faltamMeta,vendDiaNecessaria,ritmoAtual,porTipo};
 }
 
 // ============================================================
@@ -412,7 +346,7 @@ function renderExterno(d){
       </div>
     </div>`;
   }).join('');
-  const aggrPills=d.aggrEst.length?d.aggrEst.map(([uf,cnt])=>`<div class="agger-pill"><b>${cnt}</b>${uf}</div>`).join(''):'<span style="font-size:11px;color:#404070;opacity:.6">Sem dados</span>';
+  const aggrPills=d.aggrEst.length?d.aggrEst.map(([uf,cnt])=>`<div class="agger-pill"><b>${cnt}</b>${uf}</div>`).join(''):'<span style="font-size:11px;opacity:.5">Sem dados</span>';
   const medals=['🥇','🥈','🥉'];
   const rankRows=d.ranking.slice(0,35).map(([nome,info],i)=>{
     const pos=i+1,pc=pos<=3?`p${pos}`:'',cfg=EQ_CFG[info.eq]||{cor:'#444',bg:'#F5F5F5'};
@@ -470,40 +404,67 @@ function renderExterno(d){
 // RENDER INTERNO
 // ============================================================
 function renderInterno(d){
-  const topNome  = d.topCon ? d.topCon[0] : '—';
-  const topInfo  = d.topCon ? d.topCon[1] : {v:0,val:0};
-  const pct      = Math.min(100, Math.round((d.total/d.meta)*100));
-  const medals   = ['🥇','🥈','🥉'];
+  const topNome=d.topCon?d.topCon[0]:'—';
+  const topInfo=d.topCon?d.topCon[1]:{v:0,val:0};
+  const pct=Math.min(100,Math.round((d.total/d.meta)*100));
+  const pctProj=Math.min(100,Math.round((d.projecao/d.meta)*100));
+  const medals=['🥇','🥈','🥉'];
 
-  const intRows = d.ranking.map(([nome,info],i)=>{
-    const pos=i+1, pc=pos<=3?`p${pos}`:'';
+  // Tabela 1: corretores com Tipo veículo e Tipo de Uso
+  const tab1Rows=d.ranking.map(([nome,info],i)=>{
+    const pos=i+1,pc=pos<=3?`p${pos}`:'';
+    const tendCor=info.tendencia>=d.meta?'#0A6B54':info.tendencia>=d.total?'#5353E9':'#C0392B';
     return `<tr>
       <td><span class="pos ${pc}">${pos<=3?medals[i]:pos}</span></td>
       <td class="fw">${nome}</td>
-      <td style="color:var(--sub)">${info.tipo}</td>
+      <td style="color:var(--sub);font-size:11px">${info.veiculo}</td>
+      <td style="color:var(--sub);font-size:11px">${info.uso}</td>
       <td class="tr fw" style="color:#5353E9">${info.v}</td>
-      <td class="tr" style="color:#7B7B9A;font-size:11px">${fmtR(info.val)}</td>
-      <td class="tr" style="color:var(--sub);font-size:11px">${info.v>0?fmtR(info.val/info.v):'—'}</td>
-      <td class="tr" style="color:${info.tendencia>=info.v?'#0A6B54':'#C0392B'};font-weight:600">${info.tendencia}</td>
+      <td class="tr" style="font-size:11px;color:#7B7B9A">${fmtR(info.val)}</td>
+      <td class="tr" style="font-size:11px;color:#7B7B9A">${info.v>0?fmtR(info.val/info.v):'—'}</td>
+      <td class="tr fw" style="color:${tendCor}">${info.tendencia}</td>
     </tr>`;
   }).join('');
 
+  // Tabela 2: por tipo de negociação
+  const tipoRows=Object.entries(d.porTipo).sort((a,b)=>b[1].v-a[1].v).map(([tipo,info])=>`<tr>
+    <td class="fw">${tipo}</td>
+    <td class="tr fw" style="color:#5353E9">${info.v}</td>
+    <td class="tr" style="font-size:11px;color:#7B7B9A">${fmtR(info.val)}</td>
+    <td class="tr" style="font-size:11px;color:#7B7B9A">${info.v>0?fmtR(info.val/info.v):'—'}</td>
+    <td class="tr" style="font-size:11px;color:#7B7B9A">${d.total>0?Math.round((info.v/d.total)*100)+'%':'—'}</td>
+  </tr>`).join('');
+
   document.getElementById('root').innerHTML=`
     <div class="kpi-row">
-      <div class="kpi kpi-dark"><div class="kpi-label">Total de vendas</div><div class="kpi-value">${fmtN(d.total)}</div><div class="kpi-sub">Interna · Autocello · Macro</div><div class="kpi-deco">📋</div></div>
+      <div class="kpi kpi-dark"><div class="kpi-label">Total de vendas</div><div class="kpi-value">${fmtN(d.total)}</div><div class="kpi-deco">📋</div></div>
       <div class="kpi kpi-roxo"><div class="kpi-label">Faturamento adesão</div><div class="kpi-value">${fmtR(d.totVal)}</div><div class="kpi-sub">Soma valor adesão</div><div class="kpi-deco">💰</div></div>
       <div class="kpi kpi-menta"><div class="kpi-label">Ticket médio adesão</div><div class="kpi-value">${fmtR(d.ticket)}</div><div class="kpi-sub">Por contrato</div><div class="kpi-deco">📈</div></div>
     </div>
-    <div class="int-grid">
+
+    <div class="int-grid" style="margin-bottom:12px">
       <div class="destaque-card">
         <div class="destaque-label">🏆 Destaque do mês</div>
         <div class="destaque-nome">${topNome}</div>
         <div class="destaque-stats">
           <div><div class="destaque-stat-label">Vendas</div><div class="destaque-stat-value">${topInfo.v}</div></div>
-          <div><div class="destaque-stat-label">Faturamento</div><div class="destaque-stat-value" style="font-size:13px">${fmtR(topInfo.val)}</div></div>
-          <div><div class="destaque-stat-label">Ticket Médio</div><div class="destaque-stat-value" style="font-size:13px">${topInfo.v>0?fmtR(topInfo.val/topInfo.v):'—'}</div></div>
+          <div><div class="destaque-stat-label">Faturamento total</div><div class="destaque-stat-value" style="font-size:13px">${fmtR(topInfo.val)}</div></div>
+          <div><div class="destaque-stat-label">Ticket médio</div><div class="destaque-stat-value" style="font-size:13px">${topInfo.v>0?fmtR(topInfo.val/topInfo.v):'—'}</div></div>
         </div>
       </div>
+      <div class="card" style="background:var(--dark)">
+        <div class="veloci-wrap">
+          <canvas id="graficoVeloci" width="280" height="160"></canvas>
+          <div class="veloci-info">
+            <div class="veloci-atual">${fmtN(d.total)} <span style="font-size:14px;color:#5a5a9a">/ ${d.meta}</span></div>
+            <div class="veloci-meta">Meta mensal · ${pct}% atingido</div>
+            <div class="veloci-projecao">Projeção: ${fmtN(d.projecao)} vendas até o fim do mês</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tend-row">
       <div class="tendencia-card">
         <div class="tend-title">📊 Tendência de vendas</div>
         <div class="tend-projecao">${fmtN(d.projecao)} vendas</div>
@@ -511,57 +472,66 @@ function renderInterno(d){
         <div class="tend-detalhe">
           Dias úteis passados: <b style="color:#93ADFC">${d.diasPassados}</b><br>
           Dias úteis restantes: <b style="color:#AFF9E4">${d.diasFaltam}</b><br>
-          Ritmo atual: <b style="color:#DFF44C">${d.diasPassados>0?(d.total/d.diasPassados).toFixed(1):0} vendas/dia</b>
+          Ritmo atual: <b style="color:#DFF44C">${d.ritmoAtual.toFixed(1)} vendas/dia</b>
+        </div>
+      </div>
+      <div class="sugestao-card">
+        <div class="sugestao-title">🎯 Sugestão para bater a meta</div>
+        <div class="sugestao-value">${d.diasFaltam>0?d.vendDiaNecessaria.toFixed(1):'—'}</div>
+        <div class="sugestao-label">vendas/dia necessárias</div>
+        <div class="sugestao-detalhe">
+          Faltam <b style="color:#DFF44C">${d.faltamMeta}</b> vendas para a meta de <b style="color:#AFF9E4">${d.meta}</b><br>
+          Em <b style="color:#93ADFC">${d.diasFaltam}</b> dias úteis restantes<br>
+          ${d.vendDiaNecessaria>d.ritmoAtual
+            ? `<span style="color:#F7B2F5">⚠️ Precisa acelerar ${(d.vendDiaNecessaria-d.ritmoAtual).toFixed(1)} vendas/dia</span>`
+            : d.faltamMeta===0
+              ? `<span style="color:#AFF9E4">✅ Meta já atingida!</span>`
+              : `<span style="color:#AFF9E4">✅ Ritmo suficiente para bater</span>`}
         </div>
       </div>
     </div>
-    <div class="card" style="margin-bottom:12px;background:var(--dark)">
-      <div class="veloci-wrap">
-        <canvas id="graficoVeloci" width="300" height="170"></canvas>
-        <div class="veloci-info">
-          <div class="veloci-atual">${fmtN(d.total)} <span style="font-size:14px;color:#5a5a9a">/ ${d.meta}</span></div>
-          <div class="veloci-meta">Meta mensal · ${pct}% atingido</div>
-          <div class="veloci-projecao">No ritmo atual: ${fmtN(d.projecao)} vendas até o fim do mês</div>
-        </div>
-      </div>
-    </div>
-    <div class="card" style="overflow-x:auto">
-      <div class="card-title">Corretores internos</div>
+
+    <div class="sec-title">Corretores internos</div>
+    <div class="card" style="overflow-x:auto;margin-bottom:20px">
       <table class="int-table">
         <thead><tr>
-          <th>#</th><th>Corretor</th><th>Tipo negociação</th>
+          <th>#</th><th>Corretor</th>
+          <th>Tipo veículo</th><th>Tipo de Uso</th>
           <th class="tr">Vendas</th><th class="tr">Faturamento</th>
           <th class="tr">Ticket médio</th><th class="tr">Tendência</th>
         </tr></thead>
-        <tbody>${intRows}</tbody>
+        <tbody>${tab1Rows}</tbody>
+      </table>
+    </div>
+
+    <div class="sec-title">Por tipo de negociação</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="int-table">
+        <thead><tr>
+          <th>Tipo de negociação</th>
+          <th class="tr">Vendas</th><th class="tr">Faturamento</th>
+          <th class="tr">Ticket médio</th><th class="tr">% do total</th>
+        </tr></thead>
+        <tbody>${tipoRows}</tbody>
       </table>
     </div>`;
 
-  // Velocímetro
   if(graficoVeloci){graficoVeloci.destroy();graficoVeloci=null;}
   const ctx2=document.getElementById('graficoVeloci');
   if(ctx2){
-    const pctVeloci=Math.min(1,d.total/d.meta);
-    const pctProj=Math.min(1,d.projecao/d.meta);
     graficoVeloci=new Chart(ctx2,{
       type:'doughnut',
-      data:{
-        datasets:[
-          {data:[pctVeloci,1-pctVeloci],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},
-          {data:[pctProj,1-pctProj],backgroundColor:['rgba(83,83,233,0.25)','transparent'],borderWidth:0,circumference:180,rotation:270},
-        ]
-      },
-      options:{
-        responsive:false,cutout:'72%',
-        plugins:{legend:{display:false},tooltip:{enabled:false}},
-        animation:{animateRotate:true}
-      }
+      data:{datasets:[
+        {data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},
+        {data:[Math.min(pctProj,100),Math.max(0,100-pctProj)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270},
+      ]},
+      options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
     });
   }
 }
 
 // ============================================================
-// CONTROLE DE VIEW E MÊS
+// CONTROLE
 // ============================================================
 function setView(v){
   viewAtual=v;
@@ -569,54 +539,29 @@ function setView(v){
   document.getElementById('btn-interno').classList.toggle('active',v==='interno');
   atualizar();
 }
-
-function trocarMes(v){
-  mesAtual=v;
-  atualizar();
-}
-
+function trocarMes(v){mesAtual=v;atualizar();}
 function popularSelectMes(){
   const sel=document.getElementById('mes-select');
   sel.innerHTML='';
-  MESES.forEach(m=>{
-    const opt=document.createElement('option');
-    opt.value=m; opt.textContent=m;
-    if(m===mesAtual) opt.selected=true;
-    sel.appendChild(opt);
-  });
+  MESES.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m===mesAtual)o.selected=true;sel.appendChild(o);});
 }
-
-// ============================================================
-// ATUALIZAÇÃO PRINCIPAL
-// ============================================================
 async function atualizar(){
   try{
     document.getElementById('ts').textContent='Atualizando...';
     const linhas=await buscarDados(mesAtual);
-    if(viewAtual==='externo'){
-      renderExterno(processarExterno(linhas));
-    } else {
-      renderInterno(processarInterno(linhas, mesAtual), mesAtual);
-    }
+    if(viewAtual==='externo') renderExterno(processarExterno(linhas));
+    else renderInterno(processarInterno(linhas,mesAtual));
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
   }catch(e){
-    document.getElementById('root').innerHTML=
-      `<div class="state-msg err"><div class="ico">❌</div>
-       ${e.message}<br><br>
-       <small>Verifique se a aba existe na planilha e se está pública.</small></div>`;
+    document.getElementById('root').innerHTML=`<div class="state-msg err"><div class="ico">❌</div>${e.message}<br><br><small>Verifique se a aba existe e a planilha está pública.</small></div>`;
     document.getElementById('ts').textContent='Erro';
   }
 }
-
-// ============================================================
-// INICIALIZAÇÃO
-// ============================================================
 (function init(){
-  const mesDetectado = nomeMesAtual();
-  mesAtual = encontrarMes(mesDetectado);
+  mesAtual=encontrarMes(nomeMesAtual());
   popularSelectMes();
   atualizar();
-  setInterval(atualizar, 60000);
+  setInterval(atualizar,60000);
 })();
 </script>
 </body>
