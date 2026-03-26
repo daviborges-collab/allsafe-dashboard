@@ -183,6 +183,9 @@ const KW_INT=['interna','autocello','macro','interno'];
 const KW_EXT={Joao:['joao','joão'],Bernardo:['bernardo'],Renata:['renata'],Agger:['agger']};
 const EQCFG={Joao:{nome:'João',cor:'#3535C0',bg:'#EEEEFF'},Bernardo:{nome:'Bernardo',cor:'#0A6B54',bg:'#E0FDF6'},Renata:{nome:'Renata',cor:'#8B1A90',bg:'#FDE8FD'},Agger:{nome:'Agger',cor:'#5C6200',bg:'#F6FBDA'}};
 const SHEET='1xJ-uF2dH-fkneAa4hV6vpds_WD2Dd_K4uMJ12LjZxRc';
+// Planilha de cadastros de corretores
+const SHEET_CAD='18N8xYaNEYodxUcJSK33en38UzWP7y7lMVJaH50rSFEY';
+const GID_CAD='1805273442';
 const STATUS_OK=['ativo','pendente de analise','autorizado'];
 let VIEW='ext',MES='',GR=null,GV=null;
 
@@ -254,6 +257,58 @@ async function fetchRows(aba){
   const txt=await r.text();
   if(!txt.includes(','))throw new Error('Aba "'+aba+'" retornou dados inválidos.');
   return parseCSV(txt);
+}
+
+// ============================================================
+// BUSCAR E PROCESSAR CADASTROS DE CORRETORES
+// ============================================================
+async function fetchCadastros(){
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_CAD;
+  const r=await fetch(url);
+  if(!r.ok) return null;
+  const txt=await r.text();
+  if(!txt.includes(',')) return null;
+  const linhas=txt.split('\n');
+
+  // Detecta índices pelo cabeçalho
+  const hCols=[];let inQ=false,cur='';
+  for(const ch of linhas[0]){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){hCols.push(cur.trim());cur='';}else cur+=ch;}
+  hCols.push(cur.trim());
+  const iNome=hCols.findIndex(c=>n(c).includes('nome'));
+  const iEquipe=hCols.findIndex(c=>n(c).includes('time')||n(c).includes('equipe')||n(c).includes('sale_team'));
+  const iAtivo=hCols.findIndex(c=>n(c).includes('ativo')||n(c).includes('status'));
+
+  // Contagem por equipe
+  const porEq={Joao:0,Bernardo:0,Renata:0,Agger:0,Outros:0};
+  const detalhes={Joao:[],Bernardo:[],Renata:[],Agger:[],Outros:[]};
+
+  linhas.slice(1).forEach(linha=>{
+    const c=[];let inQ2=false,cur2='';
+    for(const ch of linha){if(ch==='"'){inQ2=!inQ2;}else if(ch===','&&!inQ2){c.push(cur2.trim());cur2='';}else cur2+=ch;}
+    c.push(cur2.trim());
+    if(c.length<3) return;
+
+    const nomeCorr=(c[iNome]||'').trim();
+    const equipe=(c[iEquipe]||'').trim();
+    const ativo=iAtivo>=0?(c[iAtivo]||'').trim():'';
+    // Só conta ativos (se coluna existir)
+    if(iAtivo>=0&&n(ativo)!=='sim'&&ativo!=='') return;
+    if(!nomeCorr) return;
+
+    const le=n(equipe);
+    let cat='';
+    // AGGER tem prioridade — mesmo que tenha "joão"/"bernardo"/"renata" no nome
+    if(le.includes('agger')) cat='Agger';
+    else if(le.includes('joao')||le.includes('joão')) cat='Joao';
+    else if(le.includes('bernardo')) cat='Bernardo';
+    else if(le.includes('renata')) cat='Renata';
+    else cat='Outros';
+
+    porEq[cat]++;
+    detalhes[cat].push(nomeCorr);
+  });
+
+  return{porEq,detalhes,total:Object.values(porEq).reduce((s,v)=>s+v,0)};
 }
 
 // ============================================================
@@ -397,6 +452,70 @@ function rendExt(d){
 }
 
 // ============================================================
+// RENDER PAINEL DE CADASTROS (EXTERNO)
+// ============================================================
+function rendPainelCad(cad){
+  // Cria ou atualiza o painel de cadastros após o bloco Agger
+  let painel=document.getElementById('painel-cad');
+  if(!painel){
+    painel=document.createElement('div');
+    painel.id='painel-cad';
+    painel.style.marginTop='12px';
+    document.getElementById('root').appendChild(painel);
+  }
+
+  const EQ_CAD=[
+    {k:'Joao',  nome:'João',    cor:'#3535C0',bg:'#EEEEFF'},
+    {k:'Bernardo',nome:'Bernardo',cor:'#0A6B54',bg:'#E0FDF6'},
+    {k:'Renata',nome:'Renata',  cor:'#8B1A90',bg:'#FDE8FD'},
+    {k:'Agger', nome:'Agger',   cor:'#5C6200',bg:'#F6FBDA'},
+    {k:'Outros',nome:'Outros',  cor:'#444',   bg:'#F5F5F5'},
+  ];
+
+  const rows=EQ_CAD.map(e=>{
+    const qtd=cad.porEq[e.k]||0;
+    const pct=cad.total>0?Math.round((qtd/cad.total)*100):0;
+    return '<tr>'+
+      '<td><span style="display:inline-flex;align-items:center;gap:7px">'+
+        '<span style="width:8px;height:8px;border-radius:50%;background:'+e.cor+';flex-shrink:0"></span>'+
+        '<span class="fw">'+e.nome+'</span>'+
+      '</span></td>'+
+      '<td class="tr fw" style="color:'+e.cor+';font-size:16px">'+qtd+'</td>'+
+      '<td class="tr" style="color:var(--sub);font-size:11px">'+pct+'%</td>'+
+      // Barra de progresso
+      '<td style="width:140px;padding:7px 8px">'+
+        '<div style="background:#F0F0F0;border-radius:4px;height:6px;overflow:hidden">'+
+          '<div style="width:'+pct+'%;background:'+e.cor+';height:6px;border-radius:4px;transition:width .5s"></div>'+
+        '</div>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+
+  painel.innerHTML=
+    '<div class="sectit">Corretores cadastrados por equipe</div>'+
+    '<div class="card">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+        '<div style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+cad.total+'</b> corretores ativos</div>'+
+      '</div>'+
+      '<table class="rt" style="font-size:13px">'+
+        '<thead><tr>'+
+          '<th>Equipe</th>'+
+          '<th class="tr">Corretores</th>'+
+          '<th class="tr">% do total</th>'+
+          '<th>Distribuição</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+        '<tfoot><tr>'+
+          '<td class="fw">Total</td>'+
+          '<td class="tr fw" style="color:#5353E9">'+cad.total+'</td>'+
+          '<td class="tr" style="color:var(--sub)">100%</td>'+
+          '<td></td>'+
+        '</tr></tfoot>'+
+      '</table>'+
+    '</div>';
+}
+
+// ============================================================
 // RENDER INTERNO
 // ============================================================
 function rendInt(d){
@@ -506,7 +625,11 @@ async function atualizar(){
   try{
     document.getElementById('ts').textContent='Atualizando...';
     const rows=await fetchRows(MES);
-    if(VIEW==='ext')rendExt(procExt(rows));
+    if(VIEW==='ext'){
+      rendExt(procExt(rows));
+      // Carrega cadastros em paralelo e adiciona o painel
+      fetchCadastros().then(cad=>{if(cad)rendPainelCad(cad);}).catch(()=>{});
+    }
     else rendInt(procInt(rows,MES));
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
   }catch(e){
