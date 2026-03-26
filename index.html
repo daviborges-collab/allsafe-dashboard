@@ -185,7 +185,7 @@ const EQCFG={Joao:{nome:'João',cor:'#3535C0',bg:'#EEEEFF'},Bernardo:{nome:'Bern
 const SHEET='1xJ-uF2dH-fkneAa4hV6vpds_WD2Dd_K4uMJ12LjZxRc';
 // Planilha de cadastros de corretores
 const SHEET_CAD='18N8xYaNEYodxUcJSK33en38UzWP7y7lMVJaH50rSFEY';
-const GID_CAD='1805273442';
+const ABA_CAD='cadastrados'; // nome exato da aba
 const STATUS_OK=['ativo','pendente de analise','autorizado'];
 let VIEW='ext',MES='',GR=null,GV=null;
 
@@ -263,7 +263,7 @@ async function fetchRows(aba){
 // BUSCAR E PROCESSAR CADASTROS DE CORRETORES
 // ============================================================
 async function fetchCadastros(){
-  const url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_CAD;
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&sheet='+encodeURIComponent(ABA_CAD);
   const r=await fetch(url);
   if(!r.ok) return null;
   const txt=await r.text();
