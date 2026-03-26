@@ -164,6 +164,13 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
 // CONFIGURAÇÕES
 // ============================================================
 const MESES=['Janeiro/2026','Fevereiro/2026','Março/2026','Abril/2026','Maio/2026','Junho/2026','Julho/2026','Agosto/2026','Setembro/2026','Outubro/2026','Novembro/2026','Dezembro/2026'];
+
+// GIDs das abas — quando definido, usa o GID em vez do nome (garante dados corretos)
+// Para adicionar: abra a aba no Sheets e copie o número após "gid=" da URL
+const GIDS={
+  'Março/2026': '99037583',
+  // 'Abril/2026': '123456789',
+};
 const METAS={'Janeiro/2026':130,'Fevereiro/2026':130,'Março/2026':130,'Abril/2026':130,'Maio/2026':130,'Junho/2026':130,'Julho/2026':130,'Agosto/2026':130,'Setembro/2026':130,'Outubro/2026':130,'Novembro/2026':130,'Dezembro/2026':130};
 const FERIADOS=['2026-01-01','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25'];
 const META_CORRETOR={};
@@ -241,7 +248,7 @@ function parseCSV(txt){
 }
 
 async function fetchRows(aba){
-  const url='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&sheet='+encodeURIComponent(aba);
+  const url=(GIDS&&GIDS[aba])?'https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GIDS[aba]:'https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&sheet='+encodeURIComponent(aba);
   const r=await fetch(url);
   if(!r.ok)throw new Error('Aba "'+aba+'" não encontrada.');
   const txt=await r.text();
