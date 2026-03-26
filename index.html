@@ -80,7 +80,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 .state-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem;color:var(--sub);gap:12px;font-size:14px;text-align:center}
 .state-msg .ico{font-size:32px}
 .err{color:#C0392B}
-.debug{font-size:10px;opacity:.5;margin-top:4px}
 @media(max-width:900px){.main-grid,.bottom-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
 @media(max-width:500px){.kpi-row{grid-template-columns:1fr}.page{padding:1rem}}
 </style>
@@ -104,72 +103,60 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 <script>
 const URL_CSV = 'https://docs.google.com/spreadsheets/d/1xJ-uF2dH-fkneAa4hV6vpds_WD2Dd_K4uMJ12LjZxRc/export?format=csv&sheet=vendas%20mes';
 
-// Status válidos
-const STATUS_VALIDOS = ['ativo','pendente de analise','autorizado'];
+// Contratos com qualquer uma dessas palavras na coluna Equipe de Venda
+// sao completamente ignorados — nao entram em nenhum KPI
+const IGNORAR = ['interna','autocello','interno'];
 
-// Equipes a IGNORAR completamente (não entram em nenhum KPI de equipe)
-const IGNORAR = ['interna','autocello','interno sp','interno'];
-
-// Configuração visual das equipes
+// Equipes validas
 const EQ = {
-  'Joao':     {nome:'João',    cor:'#3535C0', bg:'#EEEEFF'},
-  'Bernardo': {nome:'Bernardo',cor:'#0A6B54', bg:'#E0FDF6'},
-  'Renata':   {nome:'Renata',  cor:'#8B1A90', bg:'#FDE8FD'},
-  'Agger':    {nome:'Agger',   cor:'#5C6200', bg:'#F6FBDA'},
+  Joao:     {nome:'João',    cor:'#3535C0', bg:'#EEEEFF'},
+  Bernardo: {nome:'Bernardo',cor:'#0A6B54', bg:'#E0FDF6'},
+  Renata:   {nome:'Renata',  cor:'#8B1A90', bg:'#FDE8FD'},
+  Agger:    {nome:'Agger',   cor:'#5C6200', bg:'#F6FBDA'},
 };
 
+const STATUS_OK = ['ativo','pendente de analise','autorizado'];
 let grafico = null;
 
-// Remove acentos para comparar textos
 function norm(s){
   return String(s||'').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 }
 
-// Detecta qual equipe pertence o contrato
+function ehIgnorado(equipeStr){
+  const l = norm(equipeStr);
+  return IGNORAR.some(ig => l.includes(ig));
+}
+
 function detectarEquipe(equipeStr){
   const l = norm(equipeStr);
-  // Ignora internos
-  if(IGNORAR.some(ig => l.includes(ig))) return null;
-  // Detecta por palavra-chave
-  if(l.includes('joao') || l.includes('joão') || l.includes('jo')) {
-    if(l.includes('jo')) {
-      // Só confirma se tiver "joao" ou "joão" de fato
-      if(l.includes('joao') || l.match(/jo[aã]o/)) return 'Joao';
-    }
-  }
+  if(l.match(/jo[ao]o/) || l.includes('joao')) return 'Joao';
   if(l.includes('bernardo')) return 'Bernardo';
   if(l.includes('renata'))   return 'Renata';
   if(l.includes('agger'))    return 'Agger';
   return null;
 }
 
-// Parse de CSV respeitando aspas
 function parseCSV(txt){
-  const linhas = txt.split('\n');
-  return linhas.slice(1).map(linha => {
-    const cols = [];
-    let inAspas = false, atual = '';
+  return txt.split('\n').slice(1).map(linha => {
+    const cols=[]; let inQ=false, cur='';
     for(const c of linha){
-      if(c === '"'){ inAspas = !inAspas; }
-      else if(c === ',' && !inAspas){ cols.push(atual.trim()); atual = ''; }
-      else atual += c;
+      if(c==='"'){inQ=!inQ;}
+      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=c;
     }
-    cols.push(atual.trim());
+    cols.push(cur.trim());
     return cols;
-  }).filter(r => r.length >= 5);
+  }).filter(r=>r.length>=5);
 }
 
-// Parse de valor monetário
 function parseValor(v){
   if(!v) return 0;
-  return parseFloat(
-    String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim()
-  ) || 0;
+  return parseFloat(String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim())||0;
 }
 
-function fmtR(n){ return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function fmtN(n){ return Math.round(n).toLocaleString('pt-BR'); }
+function fmtR(n){return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtN(n){return Math.round(n).toLocaleString('pt-BR');}
 
 async function buscarDados(){
   const r = await fetch(URL_CSV);
@@ -178,85 +165,63 @@ async function buscarDados(){
 }
 
 function processar(linhas){
-  const STATUS_NORM = STATUS_VALIDOS; // já normalizados
+  // 1) Filtra por status valido
+  // 2) Remove TODOS os contratos internos/autocello
+  const validos = linhas.filter(r =>
+    STATUS_OK.includes(norm(r[0])) && !ehIgnorado(r[4])
+  );
 
-  // Filtra por status válido
-  const validos = linhas.filter(r => {
-    const s = norm(r[0]);
-    return STATUS_NORM.includes(s);
-  });
+  let totalVendas=0, totalValor=0;
+  const porEq={Joao:{v:0,val:0},Bernardo:{v:0,val:0},Renata:{v:0,val:0},Agger:{v:0,val:0}};
+  const porEst={}, porEstEq={}, porCon={};
 
-  let totalVendas = 0, totalValor = 0;
-  const porEquipe = {
-    Joao:     {v:0, val:0},
-    Bernardo: {v:0, val:0},
-    Renata:   {v:0, val:0},
-    Agger:    {v:0, val:0},
-  };
-  const porEstado = {};
-  const porEstadoEq = {};
-  const porConsultor = {};
+  validos.forEach(r=>{
+    const val = parseValor(r[6]);
+    const eqK = detectarEquipe(r[4]);
+    const uf  = String(r[11]||'').trim().toUpperCase();
+    const con = String(r[5]||'').trim();
 
-  validos.forEach(r => {
-    const valor    = parseValor(r[6]);
-    const equipeK  = detectarEquipe(r[4]);
-    const uf       = String(r[11]||'').trim().toUpperCase();
-    const consultor= String(r[5]||'').trim();
-
-    // KPI TOTAL conta TODOS os válidos, independente de equipe
     totalVendas++;
-    totalValor += valor;
+    totalValor += val;
 
-    // KPIs de equipe só contam se tiver equipe detectada
-    if(equipeK && porEquipe[equipeK]){
-      porEquipe[equipeK].v++;
-      porEquipe[equipeK].val += valor;
+    if(eqK && porEq[eqK]){
+      porEq[eqK].v++;
+      porEq[eqK].val += val;
     }
 
-    // Por estado
     if(uf){
-      porEstado[uf] = (porEstado[uf]||0)+1;
-      if(equipeK){
-        if(!porEstadoEq[uf]) porEstadoEq[uf] = {};
-        porEstadoEq[uf][equipeK] = (porEstadoEq[uf][equipeK]||0)+1;
+      porEst[uf]=(porEst[uf]||0)+1;
+      if(eqK){
+        if(!porEstEq[uf]) porEstEq[uf]={};
+        porEstEq[uf][eqK]=(porEstEq[uf][eqK]||0)+1;
       }
     }
 
-    // Ranking: só equipes detectadas, exclui internos
-    if(equipeK && consultor && consultor !== 'null'){
-      if(!porConsultor[consultor]) porConsultor[consultor] = {v:0, val:0, eq:equipeK};
-      porConsultor[consultor].v++;
-      porConsultor[consultor].val += valor;
+    if(eqK && con && con!=='null'){
+      if(!porCon[con]) porCon[con]={v:0,val:0,eq:eqK};
+      porCon[con].v++;
+      porCon[con].val+=val;
     }
   });
 
-  const aggrEstados = Object.entries(porEstadoEq)
-    .map(([uf,eq]) => [uf, eq['Agger']||0])
-    .filter(([,v]) => v > 0)
-    .sort((a,b) => b[1]-a[1]);
+  const aggrEst = Object.entries(porEstEq)
+    .map(([uf,eq])=>[uf,eq['Agger']||0])
+    .filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 
-  return {
-    totalVendas,
-    totalValor,
+  return{
+    totalVendas, totalValor,
     ticket: totalVendas ? totalValor/totalVendas : 0,
-    porEquipe,
-    porEstado,
-    porEstadoEq,
-    aggrEstados,
-    ranking: Object.entries(porConsultor).sort((a,b) => b[1].v-a[1].v),
-    totalLinhas: linhas.length,
-    totalValidos: validos.length,
+    porEq, porEst, porEstEq, aggrEst,
+    ranking: Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v),
   };
 }
 
 function renderizar(d){
-  const estados = Object.entries(d.porEstado)
-    .sort((a,b) => b[1]-a[1]).slice(0,12).map(([uf]) => uf);
+  const estados = Object.entries(d.porEst)
+    .sort((a,b)=>b[1]-a[1]).slice(0,12).map(([uf])=>uf);
 
-  // Cards de equipe
-  const eqCards = ['Joao','Bernardo','Renata','Agger'].map(k => {
-    const cfg = EQ[k];
-    const st  = d.porEquipe[k];
+  const eqCards = ['Joao','Bernardo','Renata','Agger'].map(k=>{
+    const cfg=EQ[k], st=d.porEq[k];
     return `<div class="eq-item" style="background:${cfg.bg}">
       <span class="eq-dot" style="background:${cfg.cor}"></span>
       <span class="eq-nome" style="color:${cfg.cor}">${cfg.nome}</span>
@@ -267,17 +232,13 @@ function renderizar(d){
     </div>`;
   }).join('');
 
-  // Agger por estado
-  const aggrPills = d.aggrEstados.length
-    ? d.aggrEstados.map(([uf,cnt]) => `<div class="agger-pill"><b>${cnt}</b>${uf}</div>`).join('')
+  const aggrPills = d.aggrEst.length
+    ? d.aggrEst.map(([uf,cnt])=>`<div class="agger-pill"><b>${cnt}</b>${uf}</div>`).join('')
     : '<span style="font-size:12px;color:#404070;opacity:.6">Sem dados</span>';
 
-  // Ranking
-  const medals = ['🥇','🥈','🥉'];
-  const rankRows = d.ranking.slice(0,35).map(([nome,info],i) => {
-    const pos = i+1;
-    const pc  = pos<=3 ? `p${pos}` : '';
-    const cfg = EQ[info.eq] || {cor:'#444',bg:'#F5F5F5'};
+  const medals=['🥇','🥈','🥉'];
+  const rankRows = d.ranking.slice(0,35).map(([nome,info],i)=>{
+    const pos=i+1, pc=pos<=3?`p${pos}`:'', cfg=EQ[info.eq]||{cor:'#444',bg:'#F5F5F5'};
     return `<tr>
       <td><span class="pos ${pc}">${pos<=3?medals[i]:pos}</span></td>
       <td class="fw">${nome}</td>
@@ -287,19 +248,16 @@ function renderizar(d){
     </tr>`;
   }).join('');
 
-  // Legenda gráfico
-  const legenda = ['Joao','Bernardo','Renata','Agger'].map(k =>
+  const legenda = ['Joao','Bernardo','Renata','Agger'].map(k=>
     `<span class="legend-item"><span class="legend-sq" style="background:${EQ[k].cor}"></span>${EQ[k].nome}</span>`
   ).join('');
 
-  document.getElementById('root').innerHTML = `
+  document.getElementById('root').innerHTML=`
     <div class="kpi-row">
       <div class="kpi kpi-dark">
         <div class="kpi-label">Total de vendas</div>
         <div class="kpi-value">${fmtN(d.totalVendas)}</div>
-        <div class="kpi-sub">Ativo · Pendente · Autorizado
-          <div class="debug">${d.totalLinhas} linhas · ${d.totalValidos} válidas</div>
-        </div>
+        <div class="kpi-sub">João · Bernardo · Renata · Agger</div>
         <div class="kpi-deco">📋</div>
       </div>
       <div class="kpi kpi-roxo">
@@ -315,7 +273,6 @@ function renderizar(d){
         <div class="kpi-deco">📈</div>
       </div>
     </div>
-
     <div class="main-grid">
       <div class="card">
         <div class="card-title">Equipes de venda</div>
@@ -329,24 +286,22 @@ function renderizar(d){
         <div class="legend">${legenda}</div>
       </div>
     </div>
-
     <div class="bottom-grid">
       <div class="agger-card">
         <div class="agger-title">Agger</div>
         <div class="agger-kpis">
           <div>
             <div class="agger-lbl">Total vendas</div>
-            <div class="agger-val">${d.porEquipe.Agger.v}</div>
+            <div class="agger-val">${d.porEq.Agger.v}</div>
           </div>
           <div>
             <div class="agger-lbl">Mensalidade</div>
-            <div class="agger-val sm">${fmtR(d.porEquipe.Agger.val)}</div>
+            <div class="agger-val sm">${fmtR(d.porEq.Agger.val)}</div>
           </div>
         </div>
         <div class="agger-lbl" style="margin-bottom:8px">Por estado</div>
         <div class="agger-pills">${aggrPills}</div>
       </div>
-
       <div class="card" style="overflow-x:auto">
         <div class="card-title">Ranking de vendedores</div>
         <table class="rank-table">
@@ -360,32 +315,26 @@ function renderizar(d){
     </div>
   `;
 
-  // Monta gráfico
-  if(grafico){ grafico.destroy(); grafico = null; }
-  const ctx = document.getElementById('graficoEstado');
+  if(grafico){grafico.destroy();grafico=null;}
+  const ctx=document.getElementById('graficoEstado');
   if(ctx){
-    grafico = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: estados,
-        datasets: ['Joao','Bernardo','Renata','Agger'].map(k => ({
-          label: EQ[k].nome,
-          data: estados.map(uf => (d.porEstadoEq[uf]||{})[k]||0),
-          backgroundColor: EQ[k].cor+'CC',
-          borderRadius: 4,
+    grafico=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:estados,
+        datasets:['Joao','Bernardo','Renata','Agger'].map(k=>({
+          label:EQ[k].nome,
+          data:estados.map(uf=>(d.porEstEq[uf]||{})[k]||0),
+          backgroundColor:EQ[k].cor+'CC',
+          borderRadius:4,
         }))
       },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {display:false},
-          tooltip: {mode:'index',intersect:false}
-        },
-        scales: {
-          x: {stacked:true, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{color:'#9090AA',font:{size:11}}},
-          y: {stacked:true, grid:{display:false}, ticks:{color:'#5353E9',font:{size:12,weight:'600'}}}
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+        scales:{
+          x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},
+          y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:12,weight:'600'}}}
         }
       }
     });
@@ -394,26 +343,21 @@ function renderizar(d){
 
 async function atualizar(){
   try{
-    document.getElementById('ts').textContent = 'Atualizando...';
-    const linhas = await buscarDados();
-    const dados  = processar(linhas);
-    renderizar(dados);
-    document.getElementById('ts').textContent =
-      'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
-  } catch(e){
-    document.getElementById('root').innerHTML =
-      `<div class="state-msg err">
-        <div class="ico">❌</div>
-        Erro ao carregar dados.<br>
-        <small>${e.message}</small><br><br>
-        Verifique: Compartilhar → Qualquer pessoa com o link → Leitor
-      </div>`;
-    document.getElementById('ts').textContent = 'Erro';
+    document.getElementById('ts').textContent='Atualizando...';
+    const linhas=await buscarDados();
+    renderizar(processar(linhas));
+    document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
+  }catch(e){
+    document.getElementById('root').innerHTML=
+      `<div class="state-msg err"><div class="ico">❌</div>
+       Erro ao carregar dados.<br><small>${e.message}</small><br><br>
+       Verifique: Compartilhar → Qualquer pessoa com o link → Leitor</div>`;
+    document.getElementById('ts').textContent='Erro';
   }
 }
 
 atualizar();
-setInterval(atualizar, 60000);
+setInterval(atualizar,60000);
 </script>
 </body>
 </html>
