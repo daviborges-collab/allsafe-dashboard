@@ -427,6 +427,79 @@ async function fetchBaseCorretor(){
 }
 
 // ============================================================
+// NOVOS CORRETORES — primeira venda no mês atual
+// Cruza base corretor (primeira data) com cadastrados (equipe)
+// Classifica em João / Bernardo / Renata / Agger / Outro
+// ============================================================
+async function fetchNovosCorretores(){
+  const hoje=new Date();
+  const mesAtual=hoje.getMonth();
+  const anoAtual=hoje.getFullYear();
+
+  // Busca as duas planilhas em paralelo
+  const [rBase, rCad] = await Promise.all([
+    fetch('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE),
+    fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442'),
+  ]);
+  if(!rBase.ok||!rCad.ok) return null;
+  const [txtBase, txtCad] = await Promise.all([rBase.text(), rCad.text()]);
+
+  function parse(l){
+    const c=[];let inQ=false,cur='';
+    for(const ch of l){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){c.push(cur.trim());cur='';}else cur+=ch;}
+    c.push(cur.trim());return c;
+  }
+
+  // ── Monta mapa de equipe a partir de cadastrados ──
+  // nome_normalizado -> Time de Vendas (col 7)
+  const mapaEquipe={};
+  txtCad.split('\n').slice(1).filter(l=>l.trim()).forEach(l=>{
+    const c=parse(l);
+    if(c.length<8) return;
+    const nome=n(c[1]||'');
+    if(nome) mapaEquipe[nome]=(c[7]||'').trim();
+  });
+
+  // ── Processa base corretor ──
+  const porCon={};
+  txtBase.split('\n').slice(1).filter(l=>l.trim()).forEach(l=>{
+    const c=parse(l);
+    if(c.length<6) return;
+    const regional=n(c[5]||'');
+    if(EXCLUIR_REGIONAL.some(ex=>regional===n(ex)||regional.includes(n(ex)))) return;
+    const consultor=(c[3]||'').trim();
+    if(!consultor||consultor.length<2) return;
+    const dataStr=(c[2]||'').trim();
+    if(!dataStr) return;
+    const pts=dataStr.split('/');
+    if(pts.length!==3) return;
+    const dt=new Date(parseInt(pts[2]),parseInt(pts[1])-1,parseInt(pts[0]));
+    if(isNaN(dt.getTime())) return;
+    if(!porCon[consultor]||dt<porCon[consultor].dt)
+      porCon[consultor]={dt, equipeBase:(c[4]||'').trim()};
+  });
+
+  // ── Filtra quem fez a primeira venda no mês atual ──
+  const novos=Object.entries(porCon)
+    .filter(([,d])=>d.dt.getMonth()===mesAtual&&d.dt.getFullYear()===anoAtual)
+    .map(([nome,d])=>{
+      // Cruza com cadastrados para pegar equipe oficial
+      const equipeOficial=mapaEquipe[n(nome)]||d.equipeBase||'';
+      const le=n(equipeOficial);
+      let cat='';
+      if(le.includes('agger'))          cat='Agger';
+      else if(le.includes('joao')||le.includes('joao')) cat='João';
+      else if(le.includes('bernardo'))   cat='Bernardo';
+      else if(le.includes('renata'))     cat='Renata';
+      else                               cat='Outro';
+      return{nome,desde:d.dt.toLocaleDateString('pt-BR'),equipe:equipeOficial,cat};
+    })
+    .sort((a,b)=>a.cat.localeCompare(b.cat)||a.nome.localeCompare(b.nome));
+
+  return{novos, total:novos.length};
+}
+
+// ============================================================
 // PROCESSAR EXTERNO
 // ============================================================
 function procExt(rows,aba){
@@ -655,6 +728,8 @@ function rendExt(d){
     '<div id="painel-cad" style="margin-bottom:12px"></div>'+
     // ── Corretores por estado (Script-manual, ACIMA do ranking) ──
     '<div id="painel-estado"></div>'+
+    // ── Novos corretores do mês ──
+    '<div id="painel-novos" style="margin-bottom:12px"></div>'+
     // ── Top 10 base corretor ──
     '<div id="painel-base" style="margin-bottom:12px"></div>'+
     // ── Ranking ──
@@ -697,6 +772,62 @@ function rendBaseCorretor(data){
           '<th class="tr">Itens na base</th>'+
           '<th class="tr">1ª venda</th>'+
           '<th class="tr">Média mensal</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>'+
+    '</div>';
+}
+
+// ============================================================
+// RENDER NOVOS CORRETORES DO MÊS
+// ============================================================
+function rendNovosCorretores(data){
+  const el=document.getElementById('painel-novos');
+  if(!el) return;
+
+  const hoje=new Date();
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const titMes=meses[hoje.getMonth()]+'/'+hoje.getFullYear();
+
+  const CAT_CFG={
+    'João':    {cor:'#3535C0',bg:'#EEEEFF'},
+    'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},
+    'Renata':  {cor:'#8B1A90',bg:'#FDE8FD'},
+    'Agger':   {cor:'#5C6200',bg:'#F6FBDA'},
+    'Outro':   {cor:'#555',   bg:'#F5F5F5'},
+  };
+
+  if(!data.novos.length){
+    el.innerHTML='<div class="sectit">Novos corretores em '+titMes+'</div>'+
+      '<div class="card" style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">'+
+        'Nenhum corretor com primeira venda neste mês ainda.'+
+      '</div>';
+    return;
+  }
+
+  const rows=data.novos.map(c=>{
+    const cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];
+    return '<tr>'+
+      '<td class="fw">'+c.nome+'</td>'+
+      '<td>'+
+        '<span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span>'+
+      '</td>'+
+      '<td style="font-size:11px;color:var(--sub);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.equipe+'</td>'+
+      '<td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td>'+
+    '</tr>';
+  }).join('');
+
+  el.innerHTML=
+    '<div class="sectit">🆕 Novos corretores em '+titMes+
+      ' <span style="font-size:12px;font-weight:400;color:var(--sub)">('+data.total+' corretor'+(data.total!==1?'es':'')+')</span>'+
+    '</div>'+
+    '<div class="card" style="overflow-x:auto;margin-bottom:12px">'+
+      '<table class="rt">'+
+        '<thead><tr>'+
+          '<th>Corretor</th>'+
+          '<th>Equipe</th>'+
+          '<th>Time de vendas</th>'+
+          '<th class="tr">1ª venda</th>'+
         '</tr></thead>'+
         '<tbody>'+rows+'</tbody>'+
       '</table>'+
@@ -893,6 +1024,7 @@ async function atualizar(){
       fetchCadastros().then(cad=>{if(cad)rendPainelCad(cad);}).catch(()=>{});
       fetchScriptManual().then(data=>{if(data)rendCorretoresEstado(data);}).catch(()=>{});
       fetchBaseCorretor().then(data=>{if(data)rendBaseCorretor(data);}).catch(()=>{});
+      fetchNovosCorretores().then(data=>{if(data)rendNovosCorretores(data);}).catch(()=>{});
     }
     else rendInt(procInt(rows,MES));
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
