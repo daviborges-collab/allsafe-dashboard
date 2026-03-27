@@ -196,12 +196,14 @@ let VIEW='ext',MES='',GR=null,GV=null;
 // UTILS
 // ============================================================
 function n(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+// Data local no formato YYYY-MM-DD (sem usar toISOString que retorna UTC)
+function hojeLocal(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function pv(v){if(!v)return 0;return parseFloat(String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim())||0;}
 function fR(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fN(v){return Math.round(v).toLocaleString('pt-BR');}
 function ehInt(e){const l=n(e);return KW_INT.some(k=>l.includes(k));}
 function detExt(e){const l=n(e);for(const[k,ks]of Object.entries(KW_EXT)){if(ks.some(kw=>l.includes(kw)))return k;}return null;}
-function ehUtil(d){const dw=d.getDay();if(dw===0||dw===6)return false;return!FERIADOS.includes(d.toISOString().slice(0,10));}
+function ehUtil(d){const dw=d.getDay();if(dw===0||dw===6)return false;const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return!FERIADOS.includes(ds);}
 function diasUtil(ano,mes){const r=[],d=new Date(ano,mes,1);while(d.getMonth()===mes){if(ehUtil(new Date(d)))r.push(new Date(d));d.setDate(d.getDate()+1);}return r;}
 function nomeMes(){const m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];const a=new Date();return m[a.getMonth()]+'/'+a.getFullYear();}
 function achaMes(s){const ns=n(s);return MESES.find(m=>n(m)===ns)||MESES.find(m=>n(m).split('/')[0]===ns.split('/')[0])||MESES[2];}
@@ -314,7 +316,7 @@ async function fetchCadastros(){
 // ============================================================
 function procExt(rows,aba){
   const hoje=new Date();
-  const hojeStr=hoje.toISOString().slice(0,10);
+  const hojeStr=hojeLocal();
   const v=rows.filter(r=>STATUS_OK.includes(n(r.status))&&!ehInt(r.equipe));
   let tot=0,totV=0,vendHoje=0;
   const porEq={Joao:{v:0,val:0},Bernardo:{v:0,val:0},Renata:{v:0,val:0},Agger:{v:0,val:0}};
@@ -362,7 +364,7 @@ function procExt(rows,aba){
 // ============================================================
 function procInt(rows,aba){
   const hoje=new Date();
-  const hojeStr=hoje.toISOString().slice(0,10);
+  const hojeStr=hojeLocal();
   const v=rows.filter(r=>STATUS_OK.includes(n(r.status))&&ehInt(r.equipe));
   let tot=0,totV=0,vendHoje=0;
   const porCon={};
