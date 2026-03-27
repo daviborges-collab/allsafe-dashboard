@@ -267,50 +267,39 @@ async function fetchRows(aba){
 }
 
 // ============================================================
-// CADASTROS DE CORRETORES — aba "cadastrados"
-// Colunas: B=Nome Consultor (idx1), H=Time de Vendas (idx7), P=Status Ativo (idx15)
-// Regra: João/Renata/Bernardo pelo nome da equipe; Agger quando equipe contém "agger"
-// Demais equipes são desconsideradas
+// CADASTROS DE CORRETORES — planilha cadastros, GID=1805273442
+// Índices fixos confirmados: Nome=1, Time de Vendas=7, Status Ativo=15
+// Regra: Agger=prioridade; João/Renata/Bernardo pelo nome da equipe; demais ignorados
 // ============================================================
 async function fetchCadastros(){
-  const url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&sheet='+encodeURIComponent(ABA_CAD);
+  // Usa GID direto — export por nome retorna aba errada (com IDs numéricos)
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442';
   const r=await fetch(url);
   if(!r.ok) return null;
   const txt=await r.text();
   if(!txt.includes(',')) return null;
-  const linhas=txt.split('\n');
+  const linhas=txt.split('\n').slice(1).filter(l=>l.trim());
 
-  // Usa índices fixos confirmados: Nome=1, Time=7, Status=15
   const porEq={Joao:0,Bernardo:0,Renata:0,Agger:0};
-  const nomes={Joao:[],Bernardo:[],Renata:[],Agger:[]};
 
-  linhas.slice(1).forEach(linha=>{
-    const c=[];let inQ2=false,cur2='';
-    for(const ch of linha){if(ch==='"'){inQ2=!inQ2;}else if(ch===','&&!inQ2){c.push(cur2.trim());cur2='';}else cur2+=ch;}
-    c.push(cur2.trim());
+  linhas.forEach(linha=>{
+    const c=[];let inQ=false,cur='';
+    for(const ch of linha){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){c.push(cur.trim());cur='';}else cur+=ch;}
+    c.push(cur.trim());
     if(c.length<8) return;
-
-    const ativo=n(c[15]||'');
-    if(ativo&&ativo!=='sim') return; // só ativos
-
-    const equipe=(c[7]||'').trim();
-    const le=n(equipe);
-    let cat='';
-
+    // Só ativos (col 15 = "Sim")
+    if(n(c[15]||'')!=='sim') return;
+    const le=n(c[7]||''); // col 7 = Time de Vendas
     // Agger tem prioridade absoluta
-    if(le.includes('agger')) cat='Agger';
-    // João/Renata/Bernardo pelo nome da equipe
-    else if(le.includes('joao')||le.includes('joão')) cat='Joao';
-    else if(le.includes('bernardo')) cat='Bernardo';
-    else if(le.includes('renata')) cat='Renata';
-    else return; // ignora os demais
-
-    porEq[cat]++;
-    nomes[cat].push((c[1]||'').trim());
+    if(le.includes('agger')) porEq.Agger++;
+    else if(le.includes('joao')||le.includes('joão')) porEq.Joao++;
+    else if(le.includes('bernardo')) porEq.Bernardo++;
+    else if(le.includes('renata')) porEq.Renata++;
+    // Demais ignorados
   });
 
   const total=Object.values(porEq).reduce((s,v)=>s+v,0);
-  return{porEq,nomes,total};
+  return{porEq,total};
 }
 
 // ============================================================
