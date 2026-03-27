@@ -329,7 +329,7 @@ async function fetchCadastros(){
 // UTILITÁRIOS EXTRAS
 // ============================================================
 function setFiltroExt(eq){
-  filtroExt=(eq==='todos')?null:eq;
+  filtroExt=(eq===null||eq==='todos')?null:eq;
   atualizar();
 }
 
@@ -879,15 +879,19 @@ function rendExt(d){
   const compTick  = (mesAntData&&d.tot&&mesAntData.ext.tot)?kpiComp(d.totV/d.tot, mesAntData.ext.totV/mesAntData.ext.tot):'';
 
   // Filtro de equipe — botões
-  const filtroBtns='<div class="filtro-bar">'+
-    '<span class="filtro-lbl">Equipe:</span>'+
-    '<button class="filtro-btn'+(filtroExt===null?' on':'')+'" onclick="setFiltroExt('todos')">Todas</button>'+
-    ['Joao','Bernardo','Renata','Agger'].map(k=>{
+  const filtroBtns=(()=>{
+    const onTodos=filtroExt===null;
+    let html='<div class="filtro-bar"><span class="filtro-lbl">Equipe:</span>';
+    html+='<button class="filtro-btn'+(onTodos?' on':'')+'" onclick="setFiltroExt(null)">Todas</button>';
+    ['Joao','Bernardo','Renata','Agger'].forEach(k=>{
       const cfg=EQCFG[k];
       const on=filtroExt===k;
-      return '<button class="filtro-btn'+(on?' on':'')+'" style="'+(on?'background:'+cfg.cor+';border-color:'+cfg.cor+';color:#fff':'')+'" onclick="setFiltroExt(''+k+'')">'+cfg.nome+'</button>';
-    }).join('')+
-  '</div>';
+      const st=on?'background:'+cfg.cor+';border-color:'+cfg.cor+';color:#fff':'';
+      html+='<button class="filtro-btn'+(on?' on':'')+'" style="'+st+'" onclick="setFiltroExt(\''+k+'\')">'+cfg.nome+'</button>';
+    });
+    html+='</div>';
+    return html;
+  })();
 
   // +hoje por equipe
   const hojeEq=k=>d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';
@@ -1183,12 +1187,16 @@ function rendInt(d){
   const t1R=d.rank.map(([nm,inf],i)=>{
     const pos=i+1,pc=pos<=3?'p'+pos:'';
     const tc=inf.tend>=d.meta?'#0A6B54':inf.tend>=d.tot?'#5353E9':'#C0392B';
+    const metaRowC=getMetaCorretor(nm)||(inf.metaI||0);
+    const faltRowC=metaRowC>0?Math.max(0,metaRowC-inf.v):null;
+    const faltRowCStr=faltRowC!==null?String(faltRowC):'—';
     return '<tr>'+
       '<td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td>'+
       '<td class="fw">'+nm+'</td>'+
       '<td class="tr fw" style="color:#5353E9">'+inf.v+'</td>'+
       '<td class="tr fw" style="color:'+tc+'">'+inf.tend+'</td>'+
-      (()=>{const metaC=getMetaCorretor(nome)||inf.metaI;const faltC=metaC>0?Math.max(0,metaC-inf.v):null;return '<td class="tr" style="color:#7B7B9A">'+(metaC>0?metaC:'—')+'</td><td class="tr" style="color:'+(faltC>0?'#E74C3C':'#2ecc71')+'">'+(faltC!==null?faltC:'—')+'</td>';})()
+      '<td class="tr" style="color:#7B7B9A">'+metaRowC+'</td>'+
+      '<td class="tr" style="color:'+(faltRowC>0?'#E74C3C':'#2ecc71')+'">'+faltRowCStr+'</td>'+
       '<td class="tr" style="font-size:11px;color:#7B7B9A">'+fR(inf.val)+'</td>'+
       '<td class="tr" style="font-size:11px;color:#7B7B9A">'+(inf.v>0?fR(inf.val/inf.v):'—')+'</td>'+
     '</tr>';
