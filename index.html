@@ -120,7 +120,7 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
 .objalr.verd{background:rgba(10,107,84,.15);border:1px solid rgba(10,107,84,.3);color:#2ecc71}
 .objdiff{font-size:14px;font-weight:800;display:block;margin-bottom:2px}
 /* SEÇÃO */
-.sectit{font-size:13px;font-weight:700;color:var(--dark);margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.sectit{font-size:13px;font-weight:700;color:var(--dark);margin:20px 0 8px;display:flex;align-items:center;gap:8px}
 .sectit::before{content:'';display:inline-block;width:4px;height:16px;background:var(--roxo);border-radius:2px}
 /* TABELAS */
 .it{width:100%;border-collapse:collapse;font-size:12px}
@@ -135,7 +135,8 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
 .smsg .ico{font-size:32px}
 .err{color:#C0392B}
 @media(max-width:900px){.gmain,.gbot,.g2,.g3{grid-template-columns:1fr}.krow{grid-template-columns:1fr 1fr}.tendcard{flex-direction:column}.tendl{border-right:none;padding-right:0;margin-right:0;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:12px;margin-bottom:12px}}
-@media(max-width:500px){.krow{grid-template-columns:1fr}.page{padding:1rem}}
+@media(max-width:500px){.krow{grid-template-columns:1fr}.page{padding:.75rem}}
+@media(max-width:768px){.header{flex-wrap:wrap;height:auto;padding:.5rem 1rem;gap:8px}.kval{font-size:24px!important}.card,.ag,.tendcard,.objcard,.velcard,.dest{padding:1rem}.rt td,.rt th,.it td,.it th{padding:5px 6px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -153,18 +154,19 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
     <select class="mes-sel" id="mes-sel" onchange="trocarMes(this.value)"></select>
     <div class="live"><div class="live-dot"></div>Ao vivo</div>
     <span class="ts" id="ts">—</span>
-    <button class="btn-sm" onclick="atualizar()">↻</button>
+    <button class="btn-export" onclick="exportarDashboard()" title="Exportar como imagem">⬇ Exportar</button><button class="btn-sm" onclick="atualizar()">↻</button>
   </div>
 </div>
 <div class="page">
   <div id="root"><div class="smsg"><div class="ico">⏳</div>Buscando dados...</div></div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ============================================================
 // CONFIGURAÇÕES
 // ============================================================
-const MESES=['Janeiro/2026','Fevereiro/2026','Março/2026','Abril/2026','Maio/2026','Junho/2026','Julho/2026','Agosto/2026','Setembro/2026','Outubro/2026','Novembro/2026','Dezembro/2026'];
+const MESES=['Março/2026','Abril/2026','Maio/2026','Junho/2026','Julho/2026','Agosto/2026','Setembro/2026','Outubro/2026','Novembro/2026','Dezembro/2026'];
 
 // GIDs das abas — quando definido, usa o GID em vez do nome (garante dados corretos)
 // Para adicionar: abra a aba no Sheets e copie o número após "gid=" da URL
@@ -172,10 +174,10 @@ const GIDS={
   'Março/2026': '99037583',
   // 'Abril/2026': '123456789',
 };
-const METAS={'Janeiro/2026':130,'Fevereiro/2026':130,'Março/2026':130,'Abril/2026':130,'Maio/2026':130,'Junho/2026':130,'Julho/2026':130,'Agosto/2026':130,'Setembro/2026':130,'Outubro/2026':130,'Novembro/2026':130,'Dezembro/2026':130};
+const METAS={'Março/2026':130,'Abril/2026':130,'Maio/2026':130,'Junho/2026':130,'Julho/2026':130,'Agosto/2026':130,'Setembro/2026':130,'Outubro/2026':130,'Novembro/2026':130,'Dezembro/2026':130};
 
 // Meta mensal do EXTERNO — edite mês a mês
-const METAS_EXT={'Janeiro/2026':300,'Fevereiro/2026':300,'Março/2026':300,'Abril/2026':300,'Maio/2026':300,'Junho/2026':300,'Julho/2026':300,'Agosto/2026':300,'Setembro/2026':300,'Outubro/2026':300,'Novembro/2026':300,'Dezembro/2026':300};
+const METAS_EXT={'Março/2026':300,'Abril/2026':300,'Maio/2026':300,'Junho/2026':300,'Julho/2026':300,'Agosto/2026':300,'Setembro/2026':300,'Outubro/2026':300,'Novembro/2026':300,'Dezembro/2026':300};
 const FERIADOS=['2026-01-01','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25'];
 const META_CORRETOR={};
 // Ex: META_CORRETOR['Aline Lima'] = 20;
@@ -207,6 +209,13 @@ const EXCLUIR_REGIONAL=[
 ];
 const STATUS_OK=['ativo','pendente de analise','autorizado'];
 let VIEW='ext',MES='',GR=null,GV=null;
+let filtroExt=null;   // equipe ativa no filtro externo (null=todas)
+let dadosExt=null;    // dados processados externo (cruzamento inativos)
+let dadosBase=null;   // dados base corretor (cruzamento inativos)
+let dadosMetas=null;  // metas cacheadas
+let GDE=null;         // gráfico diário externo
+let GDI=null;         // gráfico diário interno
+let mesAntData=null;  // dados mês anterior para comparativo
 
 // ============================================================
 // UTILS
@@ -222,7 +231,7 @@ function detExt(e){const l=n(e);for(const[k,ks]of Object.entries(KW_EXT)){if(ks.
 function ehUtil(d){const dw=d.getDay();if(dw===0||dw===6)return false;const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return!FERIADOS.includes(ds);}
 function diasUtil(ano,mes){const r=[],d=new Date(ano,mes,1);while(d.getMonth()===mes){if(ehUtil(new Date(d)))r.push(new Date(d));d.setDate(d.getDate()+1);}return r;}
 function nomeMes(){const m=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];const a=new Date();return m[a.getMonth()]+'/'+a.getFullYear();}
-function achaMes(s){const ns=n(s);return MESES.find(m=>n(m)===ns)||MESES.find(m=>n(m).split('/')[0]===ns.split('/')[0])||MESES[2];}
+function achaMes(s){const ns=n(s);return MESES.find(m=>n(m)===ns)||MESES.find(m=>n(m).split('/')[0]===ns.split('/')[0])||MESES[0];}
 
 // ============================================================
 // CSV — detecta colunas pelo cabeçalho
@@ -314,6 +323,194 @@ async function fetchCadastros(){
 
   const total=Object.values(porEq).reduce((s,v)=>s+v,0);
   return{porEq,total};
+}
+
+// ============================================================
+// UTILITÁRIOS EXTRAS
+// ============================================================
+function setFiltroExt(eq){
+  filtroExt=(eq==='todos')?null:eq;
+  atualizar();
+}
+
+function mostrarToast(){
+  const t=document.getElementById('toast-atualizado');
+  if(!t||window.scrollY>120) return;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+async function exportarDashboard(){
+  const btn=document.querySelector('.btn-export');
+  const orig=btn.textContent;
+  btn.textContent='⏳ Gerando...';
+  try{
+    const canvas=await html2canvas(document.body,{scale:1.5,useCORS:true,backgroundColor:'#F4F4F4'});
+    const link=document.createElement('a');
+    link.download='allsafe-dashboard-'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){alert('Erro ao exportar: '+e.message);}
+  btn.textContent=orig;
+}
+
+function kpiComp(atual,anterior){
+  if(anterior===null||anterior===undefined||anterior===0) return '';
+  const pct=Math.round(((atual-anterior)/anterior)*100);
+  const cls=pct>0?'up':pct<0?'dn':'eq';
+  const seta=pct>0?'▲':pct<0?'▼':'—';
+  return '<div class="kpi-comp '+cls+'">'+seta+' '+Math.abs(pct)+'% vs mês ant.</div>';
+}
+
+function rendGraficoDiario(canvasId,porDia,cor,chartVarName){
+  const mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const partes=MES.split('/');
+  const mIdx=mN.indexOf(n(partes[0]));
+  const ano=parseInt(partes[1])||new Date().getFullYear();
+  const nDias=new Date(ano,mIdx+1,0).getDate();
+  const hoje=new Date();
+  const ultimoDia=( hoje.getMonth()===mIdx&&hoje.getFullYear()===ano)?hoje.getDate():nDias;
+  const labels=[],data=[],bgColors=[];
+  for(let d=1;d<=nDias;d++){
+    const key=String(d).padStart(2,'0')+'/'+String(mIdx+1).padStart(2,'0');
+    labels.push(d);
+    data.push(porDia[key]||0);
+    bgColors.push(d<=ultimoDia?cor+'CC':'#E4E4E4');
+  }
+  const ctx=document.getElementById(canvasId);
+  if(!ctx) return;
+  if(window[chartVarName]){window[chartVarName].destroy();window[chartVarName]=null;}
+  window[chartVarName]=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:'Vendas',data,backgroundColor:bgColors,borderRadius:3,borderSkipped:false}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          title:i=>'Dia '+i[0].label+' — '+partes[0],
+          label:i=>i.raw+' venda'+(i.raw!==1?'s':'')
+        }}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}
+      }
+    }
+  });
+}
+
+async function fetchMetas(){
+  try{
+    const [r0,r1]=await Promise.all([
+      fetch('https://docs.google.com/spreadsheets/d/'+SHEET_META+'/export?format=csv&gid='+GID_META_INT),
+      fetch('https://docs.google.com/spreadsheets/d/'+SHEET_META+'/export?format=csv&gid='+GID_META_EXT),
+    ]);
+    const [t0,t1]=await Promise.all([r0.text(),r1.text()]);
+    function parseMeta(txt){
+      const linhas=txt.split('\n').map(l=>l.replace(/\r/,''));
+      const header=linhas[0].split(',');
+      // header[0]=label, header[1+]=meses
+      const obj={};
+      linhas.slice(1).forEach(l=>{
+        const cols=l.split(',');
+        if(!cols[0]||cols[0].toLowerCase().includes('total')) return;
+        const nome=cols[0].trim();
+        obj[n(nome)]={};
+        header.slice(1).forEach((mes,i)=>{
+          const mesN=mes.trim().toLowerCase().replace(/\//,'/');
+          obj[n(nome)][mesN]=parseInt(cols[i+1])||0;
+        });
+      });
+      return obj;
+    }
+    dadosMetas={interno:parseMeta(t0),externo:parseMeta(t1)};
+  }catch(e){dadosMetas=null;}
+}
+
+function getMetaCorretor(nome){
+  if(!dadosMetas||!dadosMetas.interno) return 0;
+  const mesN=n(MES).replace('/','/');
+  const entry=dadosMetas.interno[n(nome)];
+  if(!entry) return 0;
+  // Procura pelo mês atual
+  for(const [k,v] of Object.entries(entry)){
+    if(k.includes(mesN.split('/')[0])) return v;
+  }
+  return 0;
+}
+
+function getMetaEquipe(nomeEq){
+  if(!dadosMetas||!dadosMetas.externo) return 0;
+  const entry=dadosMetas.externo[n(nomeEq)];
+  if(!entry) return 0;
+  const mesN=n(MES);
+  for(const [k,v] of Object.entries(entry)){
+    if(mesN.includes(k.split('/')[0])) return v;
+  }
+  return 0;
+}
+
+async function fetchMesAnterior(){
+  const idx=MESES.indexOf(MES);
+  if(idx<=0) return null;
+  const mesPrev=MESES[idx-1];
+  try{
+    const rows=await fetchRows(mesPrev);
+    const vExt=rows.filter(r=>STATUS_OK.includes(n(r.status))&&!ehInt(r.equipe));
+    const vInt=rows.filter(r=>STATUS_OK.includes(n(r.status))&&ehInt(r.equipe));
+    return{
+      ext:{tot:vExt.length, totV:vExt.reduce((s,r)=>s+r.valor,0)},
+      int:{tot:vInt.length, totV:vInt.reduce((s,r)=>s+r.valor,0)},
+    };
+  }catch(e){return null;}
+}
+
+function rendCorretoresInativos(base,ext){
+  const el=document.getElementById('painel-inativos');
+  if(!el) return;
+  const hojeObj=new Date();
+  const mesAtualIdx=hojeObj.getMonth();
+  const anoAtual=hojeObj.getFullYear();
+
+  // Corretores com histórico ANTES do mês atual na base
+  const historicos=new Set();
+  (base.top10||[]).forEach(c=>{
+    if(c.desde&&c.desde!=='-'){
+      const pts=c.desde.split('/');
+      if(pts.length===3){
+        const dt=new Date(parseInt(pts[2]),parseInt(pts[1])-1,parseInt(pts[0]));
+        if(dt.getMonth()<mesAtualIdx||dt.getFullYear()<anoAtual)
+          historicos.add(n(c.nome));
+      }
+    }
+  });
+
+  // Quem vendeu este mês no externo
+  const ativosEsteMes=new Set(Object.keys(ext.porCon||{}).map(k=>n(k)));
+
+  // Inativos = estava antes, não vendeu este mês
+  const inativos=[...historicos].filter(nome=>!ativosEsteMes.has(nome));
+  const nomesFull=(base.top10||[]).filter(c=>inativos.includes(n(c.nome))).map(c=>c.nome);
+
+  if(!nomesFull.length){
+    el.innerHTML='';return;
+  }
+
+  const rows=nomesFull.map(nome=>
+    '<tr><td class="fw">'+nome+'</td><td><span class="inativo-badge">Sem venda este mês</span></td></tr>'
+  ).join('');
+
+  el.innerHTML=
+    '<div class="sectit" style="color:#e74c3c">⚠️ Corretores inativos este mês'+
+      '<span style="font-size:11px;font-weight:400;color:var(--sub);margin-left:8px">(top 10 base sem venda em '+MES+')</span>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:12px;border-left:3px solid #e74c3c;overflow-x:auto">'+
+      '<table class="rt" style="width:100%">'+
+        '<thead><tr><th>Corretor</th><th>Status</th></tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>'+
+    '</div>';
 }
 
 // ============================================================
@@ -506,15 +703,21 @@ function procExt(rows,aba){
   const hoje=new Date();
   const hojeStr=hojeLocal();
   const v=rows.filter(r=>STATUS_OK.includes(n(r.status))&&!ehInt(r.equipe));
+  // Aplica filtro de equipe se ativo
+  const vFilt=filtroExt?v.filter(r=>detExt(r.equipe)===filtroExt):v;
   let tot=0,totV=0,vendHoje=0;
+  const vendHojeEq={Joao:0,Bernardo:0,Renata:0,Agger:0};
+  const porDia={}, porDiaEq={};
   const porEq={Joao:{v:0,val:0},Bernardo:{v:0,val:0},Renata:{v:0,val:0},Agger:{v:0,val:0}};
   const porEst={},porEstEq={},porCon={};
-  v.forEach(r=>{
+  vFilt.forEach(r=>{
     const eqK=detExt(r.equipe),con=r.consultor;
     // Data da venda
     let dStr='';
+    const dia=r.data?r.data.slice(0,5):null; // dd/mm
     if(r.data){const pts=r.data.split('/');if(pts.length===3)dStr=pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');else dStr=r.data.slice(0,10);}
-    if(dStr===hojeStr)vendHoje++;
+    if(dStr===hojeStr){vendHoje++;if(eqK&&vendHojeEq[eqK]!==undefined)vendHojeEq[eqK]++;}
+    if(dia){porDia[dia]=(porDia[dia]||0)+1;if(eqK){if(!porDiaEq[eqK])porDiaEq[eqK]={};porDiaEq[eqK][dia]=(porDiaEq[eqK][dia]||0)+1;}}
     tot++;totV+=r.valor;
     if(eqK&&porEq[eqK]){porEq[eqK].v++;porEq[eqK].val+=r.valor;}
     if(r.estado){porEst[r.estado]=(porEst[r.estado]||0)+1;if(eqK){if(!porEstEq[r.estado])porEstEq[r.estado]={};porEstEq[r.estado][eqK]=(porEstEq[r.estado][eqK]||0)+1;}}
@@ -544,7 +747,7 @@ function procExt(rows,aba){
 
   const rankExt=Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v);
   const topConExt=rankExt[0]||null;
-  return{tot,totV,ticket:tot?totV/tot:0,porEq,porEst,porEstEq,agEst,rank:rankExt,topConExt,vendHoje,proj,dPass,dFalt,metaExt,faltMeta,ritmo,vdNec,dif};
+  return{tot,totV,ticket:tot?totV/tot:0,porEq,porEst,porEstEq,agEst,rank:rankExt,topConExt,vendHoje,vendHojeEq,porDia,porDiaEq,proj,dPass,dFalt,metaExt,faltMeta,ritmo,vdNec,dif};
 }
 
 // ============================================================
@@ -559,18 +762,21 @@ function procInt(rows,aba){
   const porCorCat={}; // corretor -> categoria -> qtd
   const porCorTipo={}; // corretor -> tipoNeg -> qtd
 
+  const porDia={};
   v.forEach(r=>{
     const con=r.consultor||'';
     if(!con)return;
 
     // Data da venda
     let dStr='';
+    const dia=r.data?r.data.slice(0,5):null;
     if(r.data){
       const parts=r.data.split('/');
       if(parts.length===3)dStr=parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
       else dStr=r.data.slice(0,10);
     }
     if(dStr===hojeStr)vendHoje++;
+    if(dia) porDia[dia]=(porDia[dia]||0)+1;
 
     tot++;totV+=r.valor;
 
@@ -633,7 +839,7 @@ function procInt(rows,aba){
   const catOrd=['Táxi','Aplicativo','Particular','Moto'];
   const cats=catOrd.filter(c=>catsSet.has(c));
 
-  return{tot,totV,ticket:tot?totV/tot:0,vendHoje,porCon,rank,topCon,proj,dPass,dFalt,meta,faltMeta,ritmo,vdNec,dif,porCorCat,porCorTipo,tipos,cats};
+  return{tot,totV,ticket:tot?totV/tot:0,vendHoje,porDia,porCon,rank,topCon,proj,dPass,dFalt,meta,faltMeta,ritmo,vdNec,dif,porCorCat,porCorTipo,tipos,cats};
 }
 
 // ============================================================
@@ -642,8 +848,19 @@ function procInt(rows,aba){
 function rendExt(d){
   const ests=Object.entries(d.porEst).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([uf])=>uf);
   const eqC=['Joao','Bernardo','Renata','Agger'].map(k=>{
-    const c=EQCFG[k],s=d.porEq[k];
-    return '<div class="eqi" style="background:'+c.bg+'"><span class="eqdot" style="background:'+c.cor+'"></span><span class="eqnom" style="color:'+c.cor+'">'+c.nome+'</span><div style="text-align:right"><div class="eqv" style="color:'+c.cor+'">'+s.v+'</div><div class="eqval" style="color:'+c.cor+'">'+fR(s.val)+'</div></div></div>';
+    const cfg=EQCFG[k],s=d.porEq[k];
+    const mEq=getMetaEquipe(cfg.nome);
+    const faltEq=mEq>0?Math.max(0,mEq-s.v):null;
+    const faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';
+    return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'">'+
+      '<span class="eqdot" style="background:'+cfg.cor+'"></span>'+
+      '<span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span>'+
+      '<div style="text-align:right">'+
+        '<div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div>'+
+        (mEq>0?'<div style="font-size:9px;color:'+cfg.cor+';opacity:.7">Meta '+mEq+(faltEq>0?' · faltam '+faltEq:' ✅')+'</div>':'')+
+        '<div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div>'+
+      '</div>'+
+    '</div>';
   }).join('');
   const aP=d.agEst.length?d.agEst.map(([u,c])=>'<div class="agpill"><b>'+c+'</b>'+u+'</div>').join(''):'<span style="font-size:11px;opacity:.5">Sem dados</span>';
   const md=['🥇','🥈','🥉'];
@@ -656,12 +873,38 @@ function rendExt(d){
   else if(d.dif>0){alrE='<div class="objalr verm"><span class="objdiff">⚡ +'+d.dif.toFixed(1)+' vendas/dia</span>Precisa acelerar (ritmo atual: '+d.ritmo.toFixed(1)+'/dia)</div>';}
   else{alrE='<div class="objalr verd"><span class="objdiff">✅ No caminho certo</span>Ritmo atual suficiente.</div>';}
 
+  // Comparativo mês anterior
+  const compTot   = mesAntData?kpiComp(d.tot,  mesAntData.ext.tot):'';
+  const compVal   = mesAntData?kpiComp(d.totV, mesAntData.ext.totV):'';
+  const compTick  = (mesAntData&&d.tot&&mesAntData.ext.tot)?kpiComp(d.totV/d.tot, mesAntData.ext.totV/mesAntData.ext.tot):'';
+
+  // Filtro de equipe — botões
+  const filtroBtns='<div class="filtro-bar">'+
+    '<span class="filtro-lbl">Equipe:</span>'+
+    '<button class="filtro-btn'+(filtroExt===null?' on':'')+'" onclick="setFiltroExt('todos')">Todas</button>'+
+    ['Joao','Bernardo','Renata','Agger'].map(k=>{
+      const cfg=EQCFG[k];
+      const on=filtroExt===k;
+      return '<button class="filtro-btn'+(on?' on':'')+'" style="'+(on?'background:'+cfg.cor+';border-color:'+cfg.cor+';color:#fff':'')+'" onclick="setFiltroExt(''+k+'')">'+cfg.nome+'</button>';
+    }).join('')+
+  '</div>';
+
+  // +hoje por equipe
+  const hojeEq=k=>d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';
+
   document.getElementById('root').innerHTML=
-    // ── Linha 1: KPIs (mesma proporção do Interno) ──────────────
+    // ── Filtro de equipe ──
+    filtroBtns+
+    // ── KPIs ──
     '<div class="krow">'+
-      '<div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+'<div class="kdeco">📋</div></div>'+
-      '<div class="kpi kr"><div class="klbl">Mensalidade total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Soma valor adesão</div><div class="kdeco">💰</div></div>'+
-      '<div class="kpi km"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div><div class="kdeco">📈</div></div>'+
+      '<div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+compTot+'<div class="kdeco">📋</div></div>'+
+      '<div class="kpi kr"><div class="klbl">Mensalidade total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Soma valor adesão</div>'+compVal+'<div class="kdeco">💰</div></div>'+
+      '<div class="kpi km"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div>'+compTick+'<div class="kdeco">📈</div></div>'+
+    '</div>'+
+    // ── Gráfico diário ──
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div class="ctit">Evolução diária de vendas — '+MES+'</div>'+
+      '<div class="grafico-diario-wrap"><canvas id="gcDiarioExt"></canvas></div>'+
     '</div>'+
     // ── Linha 2: Destaque + Tendência (mesma proporção do Interno: 1fr 1fr) ──
     '<div class="g2" style="margin-bottom:12px">'+
@@ -694,9 +937,9 @@ function rendExt(d){
         '<div class="veltit">Meta mensal</div>'+
         '<canvas id="gcVelE" width="260" height="150"></canvas>'+
         '<div class="velinfo">'+
-          '<div class="velat">'+fN(d.tot)+' <span style="font-size:13px;color:#5a5a9a">/ '+d.metaExt+'</span></div>'+
-          '<div class="velm">'+pctE+'% atingido · Proj: '+fN(d.proj)+'</div>'+'<div style="font-size:11px;color:#AFF9E4;margin-top:2px">Meta: <b style="color:#fff">'+fN(d.metaExt)+'</b></div>'+
-          '<div style="font-size:11px;color:#AFF9E4;margin-top:2px">Meta: <b style="color:#fff">'+fN(d.metaExt)+'</b></div>'+
+          '<div class="velat">'+fN(d.tot)+' <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:500">/ '+fN(d.metaExt)+'</span></div>'+
+          '<div class="velm">'+pctE+'% atingido · Proj: '+fN(d.proj)+'</div>'+'<div style="font-size:12px;color:#fff;margin-top:4px;font-weight:700;background:rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;display:inline-block">Meta: '+fN(d.metaExt)+'</div>'+
+          '<div style="font-size:12px;color:#fff;margin-top:4px;font-weight:700;background:rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;display:inline-block">Meta: '+fN(d.metaExt)+'</div>'+
         '</div>'+
       '</div>'+
       '<div class="objcard">'+
@@ -724,16 +967,22 @@ function rendExt(d){
       '</div>'+
     '</div>'+
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Agger por estado</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+aP+'</div></div>'+
-    // ── Corretores cadastrados (ACIMA do ranking) ──
+    // ── Corretores inativos ──
+    '<div id="painel-inativos"></div>'+
+    // ── Corretores cadastrados ──
     '<div id="painel-cad" style="margin-bottom:12px"></div>'+
     // ── Corretores por estado (Script-manual, ACIMA do ranking) ──
     '<div id="painel-estado"></div>'+
     // ── Novos corretores do mês ──
-    '<div id="painel-novos" style="margin-bottom:12px"></div>'+
+    '<div id="painel-novos"></div>'+
     // ── Top 10 base corretor ──
-    '<div id="painel-base" style="margin-bottom:12px"></div>'+
+    '<div id="painel-base"></div>'+
     // ── Ranking ──
     '<div class="card" style="overflow-x:auto"><div class="ctit">Ranking de vendedores</div><table class="rt"><thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Mensalidade</th></tr></thead><tbody>'+rR+'</tbody></table></div>';
+  // Gráfico diário externo
+  const porDiaParaGraf = filtroExt&&d.porDiaEq&&d.porDiaEq[filtroExt] ? d.porDiaEq[filtroExt] : d.porDia;
+  rendGraficoDiario('gcDiarioExt', porDiaParaGraf, EQCFG[filtroExt]?EQCFG[filtroExt].cor:'#5353E9', 'GDE');
+
   // Velocímetro externo
   if(window.GVE){window.GVE.destroy();window.GVE=null;}
   const cve=document.getElementById('gcVelE');
@@ -741,7 +990,7 @@ function rendExt(d){
 
   if(GR){GR.destroy();GR=null;}
   const ctx=document.getElementById('gcEst');
-  if(ctx)GR=new Chart(ctx,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger'].map(k=>({label:EQCFG[k].nome,data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4}))},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}}}});
+  if(ctx)GR=new Chart(ctx,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger'].map(k=>({label:EQCFG[k].nome,data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4}))},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{footer:items=>'Total: '+items.reduce((s,i)=>s+i.raw,0)+' vendas'}}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}}}});
 }
 
 // ============================================================
@@ -805,9 +1054,10 @@ function rendNovosCorretores(data){
     return;
   }
 
-  const rows=data.novos.map(c=>{
+  const rows=data.novos.map((c,i)=>{
     const cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];
     return '<tr>'+
+      '<td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td>'+
       '<td class="fw">'+c.nome+'</td>'+
       '<td>'+
         '<span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span>'+
@@ -821,9 +1071,10 @@ function rendNovosCorretores(data){
     '<div class="sectit">🆕 Novos corretores em '+titMes+
       ' <span style="font-size:12px;font-weight:400;color:var(--sub)">('+data.total+' corretor'+(data.total!==1?'es':'')+')</span>'+
     '</div>'+
-    '<div class="card" style="overflow-x:auto;margin-bottom:12px">'+
+    '<div class="card" style="overflow-x:auto">'+
       '<table class="rt">'+
         '<thead><tr>'+
+          '<th style="width:32px">#</th>'+
           '<th>Corretor</th>'+
           '<th>Equipe</th>'+
           '<th>Time de vendas</th>'+
@@ -937,8 +1188,7 @@ function rendInt(d){
       '<td class="fw">'+nm+'</td>'+
       '<td class="tr fw" style="color:#5353E9">'+inf.v+'</td>'+
       '<td class="tr fw" style="color:'+tc+'">'+inf.tend+'</td>'+
-      '<td class="tr" style="color:#7B7B9A">'+(inf.metaI>0?inf.metaI:'—')+'</td>'+
-      '<td class="tr" style="color:'+(inf.faltI>0?'#E74C3C':'#2ecc71')+'">'+(inf.faltI!==null?inf.faltI:'—')+'</td>'+
+      (()=>{const metaC=getMetaCorretor(nome)||inf.metaI;const faltC=metaC>0?Math.max(0,metaC-inf.v):null;return '<td class="tr" style="color:#7B7B9A">'+(metaC>0?metaC:'—')+'</td><td class="tr" style="color:'+(faltC>0?'#E74C3C':'#2ecc71')+'">'+(faltC!==null?faltC:'—')+'</td>';})()
       '<td class="tr" style="font-size:11px;color:#7B7B9A">'+fR(inf.val)+'</td>'+
       '<td class="tr" style="font-size:11px;color:#7B7B9A">'+(inf.v>0?fR(inf.val/inf.v):'—')+'</td>'+
     '</tr>';
@@ -971,10 +1221,32 @@ function rendInt(d){
       '<div class="kpi kr"><div class="klbl">Faturamento adesão</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Soma valor adesão</div><div class="kdeco">💰</div></div>'+
       '<div class="kpi km"><div class="klbl">Ticket médio adesão</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div><div class="kdeco">📈</div></div>'+
     '</div>'+
-    // Destaque + Velocímetro
-    '<div class="g2">'+
-      '<div class="dest"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">'+topN+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+topI.v+'</div></div><div><div class="destsl">Faturamento</div><div class="destsv" style="font-size:13px">'+fR(topI.val)+'</div></div><div><div class="destsl">Ticket médio</div><div class="destsv" style="font-size:13px">'+(topI.v>0?fR(topI.val/topI.v):'—')+'</div></div></div></div>'+
-      '<div class="velcard"><div class="veltit">Meta mensal</div><canvas id="gcVel" width="260" height="150"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:14px;color:#5a5a9a">/ '+d.meta+'</span></div><div class="velm">'+pct+'% atingido</div><div class="velp">Projeção: '+fN(d.proj)+' vendas</div><div style="font-size:11px;color:#AFF9E4;margin-top:3px">Meta: <b style="color:#fff">'+fN(d.meta)+'</b></div></div></div>'+
+    // Gráfico diário interno
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div class="ctit">Evolução diária de vendas — '+MES+'</div>'+
+      '<div class="grafico-diario-wrap"><canvas id="gcDiarioInt"></canvas></div>'+
+    '</div>'+
+    // Destaque + Velocímetro (compactos, lado a lado)
+    '<div class="g2" style="margin-bottom:12px">'+
+      '<div class="dest" style="min-height:0">'+
+        '<div class="destlbl">🏆 Destaque do mês</div>'+
+        '<div class="destnom">'+topN+'</div>'+
+        '<div class="destst">'+
+          '<div><div class="destsl">Vendas</div><div class="destsv">'+topI.v+'</div></div>'+
+          '<div><div class="destsl">Faturamento</div><div class="destsv" style="font-size:13px">'+fR(topI.val)+'</div></div>'+
+          '<div><div class="destsl">Ticket médio</div><div class="destsv" style="font-size:13px">'+(topI.v>0?fR(topI.val/topI.v):'—')+'</div></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="velcard" style="min-height:0">'+
+        '<div class="veltit">Meta mensal</div>'+
+        '<canvas id="gcVel" width="260" height="120"></canvas>'+
+        '<div class="velinfo">'+
+          '<div class="velat">'+fN(d.tot)+' <span style="font-size:13px;color:#5a5a9a">/ '+d.meta+'</span></div>'+
+          '<div class="velm">'+pct+'% atingido</div>'+
+          '<div class="velp">Projeção: '+fN(d.proj)+' vendas</div>'+
+          '<div style="font-size:12px;color:#fff;margin-top:4px;font-weight:700;background:rgba(255,255,255,.12);border-radius:6px;padding:3px 10px;display:inline-block">Meta: '+fN(d.meta)+'</div>'+
+        '</div>'+
+      '</div>'+
     '</div>'+
     // Tendência + Objetivo
     '<div class="g2">'+
@@ -1003,6 +1275,9 @@ function rendInt(d){
         : '<table class="it"><thead><tr><th>Corretor</th>'+tpHd+'<th style="text-align:center;color:#5353E9">Total</th></tr></thead><tbody>'+tpRows+'</tbody><tfoot><tr><td class="fw">Total</td>'+tpFoot+'<td class="fw" style="color:#5353E9">'+tpFootTot+'</td></tr></tfoot></table>')+
     '</div>';
 
+  // Gráfico diário interno
+  rendGraficoDiario('gcDiarioInt',d.porDia,'#5353E9','GDI');
+
   if(GV){GV.destroy();GV=null;}
   const cv=document.getElementById('gcVel');
   if(cv)GV=new Chart(cv,{type:'doughnut',data:{datasets:[{data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctP,100),Math.max(0,100-pctP)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
@@ -1017,17 +1292,28 @@ function popularSel(){const s=document.getElementById('mes-sel');s.innerHTML='';
 async function atualizar(){
   try{
     document.getElementById('ts').textContent='Atualizando...';
+    // Busca metas se ainda não carregadas
+    if(!dadosMetas) fetchMetas().catch(()=>{});
     const rows=await fetchRows(MES);
     if(VIEW==='ext'){
-      rendExt(procExt(rows,MES));
-      // Carrega cadastros e Script-manual em paralelo
+      const dExt=procExt(rows,MES);
+      dadosExt=dExt;
+      rendExt(dExt);
+      // Comparativo mês anterior (assíncrono)
+      fetchMesAnterior().then(ant=>{mesAntData=ant;rendExt(dExt);}).catch(()=>{});
+      // Painéis paralelos
       fetchCadastros().then(cad=>{if(cad)rendPainelCad(cad);}).catch(()=>{});
       fetchScriptManual().then(data=>{if(data)rendCorretoresEstado(data);}).catch(()=>{});
-      fetchBaseCorretor().then(data=>{if(data)rendBaseCorretor(data);}).catch(()=>{});
+      fetchBaseCorretor().then(data=>{
+        dadosBase=data;
+        if(data)rendBaseCorretor(data);
+        if(dadosBase&&dadosExt)rendCorretoresInativos(dadosBase,dadosExt);
+      }).catch(()=>{});
       fetchNovosCorretores().then(data=>{if(data)rendNovosCorretores(data);}).catch(()=>{});
     }
     else rendInt(procInt(rows,MES));
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
+    mostrarToast();
   }catch(e){
     document.getElementById('root').innerHTML='<div class="smsg err"><div class="ico">❌</div>'+e.message+'<br><br><small>Verifique se a aba existe e a planilha está pública.</small></div>';
     document.getElementById('ts').textContent='Erro';
@@ -1035,5 +1321,6 @@ async function atualizar(){
 }
 (function(){MES=achaMes(nomeMes());popularSel();atualizar();setInterval(atualizar,60000);})();
 </script>
+<div class="toast" id="toast-atualizado">☑ Atualizado</div>
 </body>
 </html>
