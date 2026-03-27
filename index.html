@@ -189,7 +189,8 @@ const EQCFG={Joao:{nome:'João',cor:'#3535C0',bg:'#EEEEFF'},Bernardo:{nome:'Bern
 const SHEET='1xJ-uF2dH-fkneAa4hV6vpds_WD2Dd_K4uMJ12LjZxRc';
 // Planilha de cadastros de corretores
 const SHEET_CAD='18N8xYaNEYodxUcJSK33en38UzWP7y7lMVJaH50rSFEY';
-const ABA_CAD='cadastrados'; // nome exato da aba
+const ABA_CAD='cadastrados';       // aba de cadastro de corretores
+const GID_SCRIPT='2117768339';     // aba Script-manual: corretor/estado/equipe
 const STATUS_OK=['ativo','pendente de analise','autorizado'];
 let VIEW='ext',MES='',GR=null,GV=null;
 
@@ -310,6 +311,49 @@ async function fetchCadastros(){
 
   const total=Object.values(porEq).reduce((s,v)=>s+v,0);
   return{porEq,nomes,total};
+}
+
+// ============================================================
+// SCRIPT-MANUAL — corretores por estado (aba Script-manual)
+// Colunas: corretor(0), Email(1), CPF(2), Estado(3), equipe venda(4), Nome Regional(5)
+// JRB = João/Renata/Bernardo SEM agger | Agger = contém "agger"
+// ============================================================
+async function fetchScriptManual(){
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_SCRIPT;
+  const r=await fetch(url);
+  if(!r.ok) return null;
+  const txt=await r.text();
+  if(!txt.includes(',')) return null;
+  const linhas=txt.split('\n').slice(1).filter(l=>l.trim());
+
+  const porEstJRB={}, porEstAgger={};
+
+  linhas.forEach(linha=>{
+    const c=[];let inQ=false,cur='';
+    for(const ch of linha){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){c.push(cur.trim());cur='';}else cur+=ch;}
+    c.push(cur.trim());
+    if(c.length<5) return;
+    const equipe=(c[4]||'').trim();
+    const estado=(c[3]||'').trim().toUpperCase();
+    if(!estado) return;
+    const le=n(equipe);
+    const temAgger=le.includes('agger');
+
+    if(temAgger){
+      porEstAgger[estado]=(porEstAgger[estado]||0)+1;
+    } else {
+      const temJRB=le.includes('joao')||le.includes('joao')||le.includes('renata')||le.includes('bernardo');
+      if(temJRB) porEstJRB[estado]=(porEstJRB[estado]||0)+1;
+    }
+  });
+
+  const sortEst=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1]);
+  return{
+    jrb: sortEst(porEstJRB),
+    agger: sortEst(porEstAgger),
+    totalJRB: Object.values(porEstJRB).reduce((s,v)=>s+v,0),
+    totalAgger: Object.values(porEstAgger).reduce((s,v)=>s+v,0),
+  };
 }
 
 // ============================================================
@@ -538,6 +582,8 @@ function rendExt(d){
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Agger por estado</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+aP+'</div></div>'+
     // ── Corretores cadastrados (ACIMA do ranking) ──
     '<div id="painel-cad" style="margin-bottom:12px"></div>'+
+    // ── Corretores por estado (Script-manual, ACIMA do ranking) ──
+    '<div id="painel-estado"></div>'+
     // ── Ranking ──
     '<div class="card" style="overflow-x:auto"><div class="ctit">Ranking de vendedores</div><table class="rt"><thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Mensalidade</th></tr></thead><tbody>'+rR+'</tbody></table></div>';
   // Velocímetro externo
@@ -548,6 +594,41 @@ function rendExt(d){
   if(GR){GR.destroy();GR=null;}
   const ctx=document.getElementById('gcEst');
   if(ctx)GR=new Chart(ctx,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger'].map(k=>({label:EQCFG[k].nome,data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4}))},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}}}});
+}
+
+// ============================================================
+// RENDER CORRETORES POR ESTADO (Script-manual)
+// ============================================================
+function rendCorretoresEstado(data){
+  let el=document.getElementById('painel-estado');
+  if(!el) return;
+
+  function pillsHtml(lista, cor){
+    return lista.map(([uf,cnt])=>
+      '<div style="display:inline-flex;align-items:center;gap:5px;background:'+cor+'22;border:1px solid '+cor+'55;border-radius:20px;padding:3px 10px;font-size:12px;color:'+cor+'">'+
+        '<b style="color:#fff">'+cnt+'</b>'+uf+
+      '</div>'
+    ).join('');
+  }
+
+  el.innerHTML=
+    // Bloco João / Renata / Bernardo
+    '<div class="sectit">Corretores por estado — João · Renata · Bernardo</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+        '<span style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+data.totalJRB+'</b> corretores</span>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.jrb,'#5353E9')+'</div>'+
+    '</div>'+
+    // Bloco Agger
+    '<div class="sectit" style="color:var(--dark)">Corretores por estado — Agger</div>'+
+    '<div style="background:var(--dark);border-radius:14px;padding:1.25rem;margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+        '<span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--roxo);text-transform:uppercase">◆ Agger</span>'+
+        '<span style="font-size:11px;color:#6060A0">Total: <b style="color:var(--limao)">'+data.totalAgger+'</b> corretores</span>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.agger,'#AFF9E4')+'</div>'+
+    '</div>';
 }
 
 // ============================================================
@@ -701,8 +782,9 @@ async function atualizar(){
     const rows=await fetchRows(MES);
     if(VIEW==='ext'){
       rendExt(procExt(rows,MES));
-      // Carrega cadastros em paralelo e adiciona o painel
+      // Carrega cadastros e Script-manual em paralelo
       fetchCadastros().then(cad=>{if(cad)rendPainelCad(cad);}).catch(()=>{});
+      fetchScriptManual().then(data=>{if(data)rendCorretoresEstado(data);}).catch(()=>{});
     }
     else rendInt(procInt(rows,MES));
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
