@@ -186,7 +186,7 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-Chart.register(ChartDataLabels);
+if(typeof ChartDataLabels!=="undefined")Chart.register(ChartDataLabels);
 // ============================================================
 // CONFIGURAÇÕES
 // ============================================================
@@ -1043,23 +1043,47 @@ function rendExt(d){
 
   if(GR){GR.destroy();GR=null;}
   const ctx=document.getElementById('gcEst');
-  if(ctx)GR=new Chart(ctx,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger'].map((k,ki)=>({label:EQCFG[k].nome,data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4,datalabels:ki===3?{display:'auto',anchor:'end',align:'right',formatter:(_,ctx2)=>{const tot=ests.map(uf=>Object.values(d.porEstEq[uf]||{}).reduce((s,x)=>s+x,0));const v=tot[ctx2.dataIndex];return v>0?v:'';},color:'#5353E9',font:{size:10,weight:'700'},offset:4}:{display:false}}))},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+  if(ctx)GR=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:ests,
+      datasets:['Joao','Bernardo','Renata','Agger'].map((k,ki)=>({
+        label:EQCFG[k].nome,
+        data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),
+        backgroundColor:EQCFG[k].cor+'CC',
+        borderRadius:4,
+      }))
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
-        tooltip:{mode:'index',intersect:false,callbacks:{footer:items=>'Total: '+items.reduce((s,i)=>s+i.raw,0)+' vendas'}},
+        tooltip:{mode:'index',intersect:false,callbacks:{
+          footer:items=>'Total: '+items.reduce((s,i)=>s+i.raw,0)+' vendas'
+        }},
         datalabels:{
-          display:ctx2=>{const ds=ctx2.chart.data.datasets;const isLast=ctx2.datasetIndex===ds.length-1;const tot=ds.reduce((s,d)=>s+(d.data[ctx2.dataIndex]||0),0);return isLast&&tot>0;},
-          anchor:'end',align:'right',offset:4,
-          color:'#5353E9',font:{size:10,weight:'700'},
-          formatter:(v,ctx2)=>{return ctx2.chart.data.datasets.reduce((s,d)=>s+(d.data[ctx2.dataIndex]||0),0);}
+          // Mostra total apenas na última barra de cada estado
+          display:(ctx2)=>ctx2.datasetIndex===ctx2.chart.data.datasets.length-1,
+          anchor:'end',
+          align:'right',
+          offset:4,
+          color:'#5353E9',
+          font:{size:10,weight:'700'},
+          formatter:(_,ctx2)=>{
+            const tot=ctx2.chart.data.datasets.reduce((s,ds)=>s+(ds.data[ctx2.dataIndex]||0),0);
+            return tot>0?tot:'';
+          }
         }
       },
       scales:{
         x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},
         y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}
       },
-      layout:{padding:{right:40}}
-    },plugins:[ChartDataLabels]}});
+      layout:{padding:{right:42}}
+    }
+  })
 }
 
 // ============================================================
