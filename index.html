@@ -847,6 +847,9 @@ function procInt(rows,aba){
 // ============================================================
 function rendExt(d){
   const ests=Object.entries(d.porEst).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([uf])=>uf);
+  // +hoje por equipe (declarado antes de eqC para evitar TDZ)
+  const hojeEq=k=>d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';
+
   const eqC=['Joao','Bernardo','Renata','Agger'].map(k=>{
     const cfg=EQCFG[k],s=d.porEq[k];
     const mEq=getMetaEquipe(cfg.nome);
@@ -893,8 +896,6 @@ function rendExt(d){
     return html;
   })();
 
-  // +hoje por equipe
-  const hojeEq=k=>d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';
 
   document.getElementById('root').innerHTML=
     // ── Filtro de equipe ──
