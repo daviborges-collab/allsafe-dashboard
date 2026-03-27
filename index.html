@@ -15,7 +15,7 @@
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh}
 .header{background:var(--dark);padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .header-left{display:flex;align-items:center;gap:14px}
-.logo-img{height:30px;width:auto;object-fit:contain}
+.logo-img{height:34px;width:auto;object-fit:contain}
 .header-div{width:1px;height:26px;background:rgba(255,255,255,.15)}
 .header h1{font-size:13px;font-weight:500;color:rgba(255,255,255,.6)}
 .header-right{display:flex;align-items:center;gap:10px}
@@ -50,7 +50,7 @@ select.mes-sel{background:#1a1a3e;border:1px solid #3a3a6a;border-radius:6px;col
 .ctit{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:12px;display:flex;align-items:center;gap:6px}
 .ctit::before{content:'';display:inline-block;width:3px;height:12px;background:var(--roxo);border-radius:2px}
 /* EQ */
-.eqi{display:flex;align-items:center;padding:9px 11px;border-radius:10px;margin-bottom:7px;gap:9px}
+.eqi{display:flex;align-items:center;padding:10px 14px;border-radius:12px;margin-bottom:0;gap:10px}
 .eqi:last-child{margin-bottom:0}
 .eqdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .eqnom{font-size:13px;font-weight:600;flex:1}
@@ -481,9 +481,12 @@ function rendExt(d){
         '<div class="objcard"><div class="objtit">Objetivo diário</div><div class="objmain"><div class="objval">'+(d.dFalt>0?d.vdNec.toFixed(1):'—')+'</div><div class="objunit">vendas/dia<br><span style="font-size:10px;color:#5a5a9a">necessárias</span></div></div><div class="objlbl">Faltam <b style="color:'+(d.faltMeta===0?'#2ecc71':'#DFF44C')+'">'+d.faltMeta+'</b> · '+d.dFalt+' dias úteis</div>'+alrE+'</div>'+
       '</div>'+
     '</div>'+
-    '<div class="gmain">'+
-      '<div class="card"><div class="ctit">Vendas por estado</div><div class="cwrap" style="height:'+Math.max(200,ests.length*32)+'px"><canvas id="gcEst"></canvas></div><div class="lg">'+lg+'</div></div>'+
-      '<div class="card"><div class="ctit">KPIs por equipe</div>'+eqC+'</div>'+
+    // Equipes em linha horizontal
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'+eqC+'</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div class="ctit">Vendas por estado</div>'+
+      '<div class="cwrap" style="height:'+Math.max(200,ests.length*32)+'px"><canvas id="gcEst"></canvas></div>'+
+      '<div class="lg">'+lg+'</div>'+
     '</div>'+
     // Contador Agger
     '<div style="margin-bottom:12px">'+
@@ -504,7 +507,6 @@ function rendExt(d){
     '</div>'+
     '<div class="gbot">'+
       '<div class="card" style="overflow-x:auto"><div class="ctit">Ranking de vendedores</div><table class="rt"><thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Mensalidade</th></tr></thead><tbody>'+rR+'</tbody></table></div>'+
-      '<div class="card"><div class="ctit">Equipes de venda</div>'+eqC+'</div>'+
     '</div>';
   // Velocímetro externo
   if(window.GVE){window.GVE.destroy();window.GVE=null;}
