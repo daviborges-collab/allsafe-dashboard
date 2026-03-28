@@ -224,10 +224,9 @@ const NOMES_MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','
 let MESES=[]; // preenchido por detectarMeses()
 
 function gerarCandidatosMeses(){
-  var inicio={mes:2,ano:2026},hoje=new Date();
-  var limM=hoje.getMonth()+3,limA=hoje.getFullYear();
-  if(limM>11){limA++;limM-=12;}
-  var result=[],a=inicio.ano,m=inicio.mes;
+  var hoje=new Date();
+  var limM=hoje.getMonth(),limA=hoje.getFullYear();
+  var result=[],a=2026,m=0; // Janeiro/2026
   while(a<limA||(a===limA&&m<=limM)){
     result.push(NOMES_MES[m]+'/'+a);
     m++;if(m>11){m=0;a++;}
@@ -242,13 +241,13 @@ async function detectarMeses(){
       var url=(GIDS&&GIDS[aba])
         ?'https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GIDS[aba]
         :'https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&sheet='+encodeURIComponent(aba);
-      var ctrl=new AbortController();
-      return fetch(url,{signal:ctrl.signal}).then(function(r){var ok=r.ok;try{ctrl.abort();}catch(e){}return ok?aba:null;}).catch(function(){return null;});
+      return fetch(url).then(function(r){return r.ok?aba:null;}).catch(function(){return null;});
     }));
     var found=results.map(function(r){return r.status==='fulfilled'?r.value:null;}).filter(Boolean);
-    if(found.length) return found;
+    if(found.length)return found;
   }catch(e){}
-  return candidatos.slice(0,1);
+  // Fallback: mês atual
+  return[NOMES_MES[new Date().getMonth()]+'/'+new Date().getFullYear()];
 }
 
 // GIDs das abas — quando definido, usa o GID em vez do nome
@@ -516,7 +515,7 @@ function rendGraficoDiario(canvasId,porDia,cor,chartVarName){
   for(let d=1;d<=nDias;d++){const key=String(d).padStart(2,'0')+'/'+String(mIdx+1).padStart(2,'0');labels.push(d);data.push(porDia[key]||0);bgColors.push(d<=ultimoDia?cor+'CC':'#E4E4E4');}
   const ctx=document.getElementById(canvasId);if(!ctx)return;
   if(window[chartVarName]){window[chartVarName].destroy();window[chartVarName]=null;}
-  window[chartVarName]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Vendas',data,backgroundColor:bgColors,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>'Dia '+i[0].label+' — '+partes[0],label:i=>i.raw+' venda'+(i.raw!==1?'s':'')}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}}}});
+  window[chartVarName]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Vendas',data,backgroundColor:bgColors,borderRadius:3,borderSkipped:false}]},plugins:[{id:'barLabels',afterDatasetsDraw:function(chart){var ctx2=chart.ctx;ctx2.save();chart.data.datasets.forEach(function(ds,di){var meta=chart.getDatasetMeta(di);meta.data.forEach(function(bar,i){var val=ds.data[i];if(val>0){ctx2.fillStyle='#fff';ctx2.font='700 9px Inter,sans-serif';ctx2.textAlign='center';ctx2.textBaseline='middle';var y=bar.y,h=bar.base-bar.y;if(h>14)ctx2.fillText(val,bar.x,y+h/2);else{ctx2.fillStyle=bgColors[i]==='#E4E4E4'?'#bbb':'#5353E9';ctx2.fillText(val,bar.x,y-8);}}});});ctx2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>'Dia '+i[0].label+' — '+partes[0],label:i=>i.raw+' venda'+(i.raw!==1?'s':'')}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}},layout:{padding:{top:16}}}});
 }
 
 async function fetchMetas(){try{/* placeholder — SHEET_META não definido */dadosMetas=null;}catch(e){dadosMetas=null;}}
@@ -694,13 +693,12 @@ function rendExt(d){
     filtroBtns+
     '<div class="krow">'+
       '<div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+compTot+'<div class="kdeco">📋</div></div>'+
-      '<div class="kpi kr"><div class="klbl">Mensalidade total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Soma valor adesão</div>'+compVal+'<div class="kdeco">💰</div></div>'+
+      '<div class="kpi kr"><div class="klbl">Adesão total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Valor de adesão</div>'+compVal+'<div class="kdeco">💰</div></div>'+
       '<div class="kpi km"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div>'+compTick+'<div class="kdeco">📈</div></div>'+
     '</div>'+
-    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioExt"></canvas></div></div>'+
     '<div class="g2" style="margin-bottom:12px">'+
       (d.topConExt
-        ?'<div class="dest"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">'+d.topConExt[0]+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+d.topConExt[1].v+'</div></div><div><div class="destsl">Equipe</div><div class="destsv" style="font-size:12px">'+(EQCFG[d.topConExt[1].eq]?EQCFG[d.topConExt[1].eq].nome:d.topConExt[1].eq)+'</div></div><div><div class="destsl">Mensalidade</div><div class="destsv" style="font-size:12px">'+fR(d.topConExt[1].val)+'</div></div></div></div>'
+        ?'<div class="dest"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">'+d.topConExt[0]+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+d.topConExt[1].v+'</div></div><div><div class="destsl">Equipe</div><div class="destsv" style="font-size:12px">'+(EQCFG[d.topConExt[1].eq]?EQCFG[d.topConExt[1].eq].nome:d.topConExt[1].eq)+'</div></div><div><div class="destsl">Adesão</div><div class="destsv" style="font-size:12px">'+fR(d.topConExt[1].val)+'</div></div></div></div>'
         :'<div class="dest" style="opacity:.5"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">—</div></div>')+
       buildTendencia(d)+
     '</div>'+
@@ -708,14 +706,15 @@ function rendExt(d){
       '<div class="velcard"><div class="veltit">Meta mensal</div><canvas id="gcVelE" width="260" height="150"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:500">/ '+fN(d.metaExt)+'</span></div><div class="velm">'+pctE+'% atingido</div></div></div>'+
       buildObjetivo(d,d.metaExt,pctE,alrE)+
     '</div>'+
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioExt"></canvas></div></div>'+
     '<div class="gmain" style="margin-bottom:12px"><div class="card"><div class="ctit">Vendas por estado</div><div class="cwrap" style="height:'+Math.max(220,ests.length*32)+'px"><canvas id="gcEst"></canvas></div><div class="lg">'+lg+'</div></div><div class="card"><div class="ctit">Equipes de venda</div>'+eqC+'</div></div>'+
-    '<div style="background:var(--dark);border-radius:14px;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><div style="display:flex;gap:32px;align-items:center"><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Total vendas</div><div style="font-size:28px;font-weight:800;color:var(--limao)">'+d.porEq.Agger.v+'</div></div><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Mensalidade</div><div style="font-size:16px;font-weight:700;color:var(--menta)">'+fR(d.porEq.Agger.val)+'</div></div></div></div>'+
+    '<div style="background:var(--dark);border-radius:14px;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><div style="display:flex;gap:32px;align-items:center"><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Total vendas</div><div style="font-size:28px;font-weight:800;color:var(--limao)">'+d.porEq.Agger.v+'</div></div><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Adesão</div><div style="font-size:16px;font-weight:700;color:var(--menta)">'+fR(d.porEq.Agger.val)+'</div></div></div></div>'+
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Agger por estado</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+aP+'</div></div>'+
     '<div id="painel-cad" style="margin-bottom:12px"></div>'+
     '<div id="painel-estado"></div>'+
     '<div id="painel-novos"></div>'+
     '<div id="painel-base"></div>'+
-    expandCard('Ranking de vendedores','<div style="overflow-x:auto"><table class="rt"><thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Mensalidade</th></tr></thead><tbody>'+rR+'</tbody></table></div>','ranking',false)+
+    expandCard('Ranking de vendedores','<div style="overflow-x:auto"><table class="rt"><thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Adesão</th></tr></thead><tbody>'+rR+'</tbody></table></div>','ranking',false)+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
 
   var porDiaParaGraf=filtroExt&&d.porDiaEq&&d.porDiaEq[filtroExt]?d.porDiaEq[filtroExt]:d.porDia;
@@ -727,7 +726,7 @@ function rendExt(d){
 
   if(GR){GR.destroy();GR=null;}
   var ctx=document.getElementById('gcEst');
-  if(ctx)GR=new Chart(ctx,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger'].map(k=>({label:EQCFG[k].nome,data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4}))},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{footer:items=>'Total: '+items.reduce((s,i)=>s+i.raw,0)+' vendas'}}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}}}});
+  if(ctx)GR=new Chart(ctx,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger'].map(k=>({label:EQCFG[k].nome,data:ests.map(uf=>(d.porEstEq[uf]||{})[k]||0),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4}))},plugins:[{id:'stackedTotals',afterDatasetsDraw:function(chart){if(chart.data.datasets.length===0)return;var ctx2=chart.ctx;ctx2.save();var lastDI=chart.data.datasets.length-1;var meta=chart.getDatasetMeta(lastDI);meta.data.forEach(function(bar,i){var tot=0;chart.data.datasets.forEach(function(ds){tot+=ds.data[i]||0;});if(tot>0){ctx2.fillStyle='#5353E9';ctx2.font='700 10px Inter,sans-serif';ctx2.textAlign='left';ctx2.textBaseline='middle';ctx2.fillText(tot,bar.x+6,bar.y);}});ctx2.restore();}}],options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{footer:items=>'Total: '+items.reduce((s,i)=>s+i.raw,0)+' vendas'}}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}},layout:{padding:{right:36}}}});
 }
 
 // ============================================================
@@ -753,14 +752,14 @@ function rendNovosCorretores(data){
   var titMes=meses[hoje.getMonth()]+'/'+hoje.getFullYear();
   var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Outro':{cor:'#555',bg:'#F5F5F5'}};
   if(!data.novos.length){
-    el.innerHTML=expandCard('🆕 Novos corretores em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhum corretor com primeira venda neste mês ainda.</div>','novos',false);
+    el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhuma 1ª venda de corretor neste mês ainda.</div>','novos',false);
     return;
   }
   var rows=data.novos.map(function(c,i){
     var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];
     return '<tr><td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td><td class="fw">'+c.nome+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td style="font-size:11px;color:var(--sub);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.equipe+'</td><td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td></tr>';
   }).join('');
-  el.innerHTML=expandCard('🆕 Novos corretores em '+titMes+' <small style="font-weight:400;color:var(--sub)">('+data.total+')</small>','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th style="width:28px">#</th><th>Corretor</th><th>Equipe</th><th>Time de vendas</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);
+  el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes+' <small style="font-weight:400;color:var(--sub)">('+data.total+')</small>','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th style="width:28px">#</th><th>Corretor</th><th>Equipe</th><th>Time de vendas</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);
 }
 
 // ============================================================
@@ -838,10 +837,9 @@ function rendInt(d){
     corBtns+
     '<div class="krow">'+
       '<div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+'<div class="kdeco">📋</div></div>'+
-      '<div class="kpi kr"><div class="klbl">Faturamento adesão</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Soma valor adesão</div><div class="kdeco">💰</div></div>'+
+      '<div class="kpi kr"><div class="klbl">Faturamento adesão</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Valor de adesão</div><div class="kdeco">💰</div></div>'+
       '<div class="kpi km"><div class="klbl">Ticket médio adesão</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div><div class="kdeco">📈</div></div>'+
     '</div>'+
-    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioInt"></canvas></div></div>'+
     '<div class="g2" style="margin-bottom:12px">'+
       '<div class="dest" style="min-height:0"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom" style="font-size:16px;margin-bottom:6px">'+topN+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+topI.v+'</div></div><div><div class="destsl">Faturamento</div><div class="destsv" style="font-size:13px">'+fR(topI.val)+'</div></div><div><div class="destsl">Ticket médio</div><div class="destsv" style="font-size:13px">'+(topI.v>0?fR(topI.val/topI.v):'—')+'</div></div></div></div>'+
       '<div class="velcard" style="min-height:0"><div class="veltit">Meta mensal</div><canvas id="gcVel" width="260" height="120"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:13px;color:#5a5a9a">/ '+d.meta+'</span></div><div class="velm">'+pct+'% atingido</div><div class="velp">Projeção: '+fN(d.proj)+' vendas</div><div style="font-size:12px;color:#fff;margin-top:4px;font-weight:700;background:rgba(255,255,255,.12);border-radius:6px;padding:3px 10px;display:inline-block">Meta: '+fN(d.meta)+'</div></div></div>'+
@@ -850,6 +848,7 @@ function rendInt(d){
       buildTendencia(d)+
       buildObjetivo(d,d.meta,pct,alr)+
     '</div>'+
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioInt"></canvas></div></div>'+
     expandCard('Corretores internos','<div style="overflow-x:auto"><table class="it"><thead><tr><th>#</th><th>Corretor</th><th class="tr">Vendas</th><th class="tr">Tendência</th><th class="tr">Meta</th><th class="tr">Faltam</th><th class="tr">Faturamento</th><th class="tr">Ticket médio</th></tr></thead><tbody>'+t1R+'</tbody></table></div>','cor-int',true)+
     expandCard('Vendas por categoria','<div style="overflow-x:auto"><table class="it"><thead><tr><th>Corretor</th>'+uHd+'<th class="tr">Total</th></tr></thead><tbody>'+uRows+'</tbody><tfoot><tr><td class="fw">Total</td>'+uFoot+'<td class="tr fw" style="color:#5353E9">'+d.tot+'</td></tr></tfoot></table></div>','cat',false)+
     expandCard('Origem de venda',(d.tipos.length===0?'<div style="padding:1rem;color:var(--sub);font-size:13px">⚠️ A coluna "Como conheceu" não existe nessa aba. Adicione-a à planilha para visualizar.</div>':'<div style="overflow-x:auto"><table class="it"><thead><tr><th>Corretor</th>'+tpHd+'<th style="text-align:center;color:#5353E9">Total</th></tr></thead><tbody>'+tpRows+'</tbody><tfoot><tr><td class="fw">Total</td>'+tpFoot+'<td class="fw" style="color:#5353E9">'+tpFootTot+'</td></tr></tfoot></table></div>'),'origem',false)+
@@ -965,9 +964,6 @@ function rendTotal(d){
       '<div class="kpi kr"><div class="klbl">Faturamento total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Externo + Interno</div>'+compVal+'<div class="kdeco">💰</div></div>'+
       '<div class="kpi km"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div>'+compTick+'<div class="kdeco">📈</div></div>'+
     '</div>'+
-    // Gráfico diário
-    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioTotal"></canvas></div></div>'+
-    // Destaque comercial + Tendência
     '<div class="g2" style="margin-bottom:12px">'+
       '<div class="dest" style="min-height:0">'+
         '<div class="destlbl">🏆 Comercial em destaque</div>'+
@@ -995,7 +991,7 @@ function rendTotal(d){
       '<div class="velcard"><div class="veltit">Meta mensal combinada</div><canvas id="gcVelTotal" width="260" height="150"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:500">/ '+fN(d.metaTotal)+'</span></div><div class="velm">'+pct+'% atingido</div></div></div>'+
       buildObjetivo(d,d.metaTotal,pct,alr)+
     '</div>'+
-    // Tabela origem de vendas
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioTotal"></canvas></div></div>'+
     expandCard('Origem de venda',
       (d.tipos.length===0
         ?'<div style="padding:1rem;color:var(--sub);font-size:13px">Dados de origem não disponíveis neste mês.</div>'
@@ -1051,7 +1047,7 @@ async function atualizar(){
   }
 }
 (async function(){
-  try{MESES=await detectarMeses();}catch(e){MESES=gerarCandidatosMeses().slice(0,1);}
+  try{MESES=await detectarMeses();}catch(e){MESES=[NOMES_MES[new Date().getMonth()]+'/'+new Date().getFullYear()];}
   MES=achaMes(nomeMes());
   popularSel();
   atualizar();
