@@ -174,7 +174,7 @@ select.mes-sel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,25
 // ============================================================
 var NOMES_MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MESES=[];
-var _renderVersion=0; // Previne callbacks assíncronos obsoletos
+var _renderVersion=0;
 
 function gerarCandidatosMeses(){
   var hoje=new Date();
@@ -187,8 +187,6 @@ function gerarCandidatosMeses(){
   return result;
 }
 
-// GIDs das abas — preenchido automaticamente por descobrirGIDs()
-// Fallback manual caso a auto-descoberta falhe
 var GIDS={
   'Janeiro/2026':'1825541770',
   'Fevereiro/2026':'378303393',
@@ -213,8 +211,8 @@ async function detectarMeses(){
 
 var META_INT_DEFAULT=130, META_EXT_DEFAULT=300;
 var SHEET_META='1X5TmmMx3J-g321tcVkjubjIkxxYjPNQRk5q-wHRTniE';
-var METAS_INT_DATA=null; // {corretores:{nome:valor}, total:N, mes:''}
-var METAS_EXT_DATA=null; // {equipes:{nome:valor}, total:N, mes:''}
+var METAS_INT_DATA=null;
+var METAS_EXT_DATA=null;
 
 function getMetaInt(aba){
   if(METAS_INT_DATA&&METAS_INT_DATA.meses){
@@ -236,7 +234,7 @@ function calcPascoa(ano){var a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.flo
 function geraFeriados(a0,a1){var f=[];for(var a=a0;a<=a1;a++){FERIADOS_FIXOS.forEach(function(fd){f.push(a+'-'+String(fd[0]).padStart(2,'0')+'-'+String(fd[1]).padStart(2,'0'));});var p=calcPascoa(a);var sf=new Date(p);sf.setDate(sf.getDate()-2);f.push(sf.getFullYear()+'-'+String(sf.getMonth()+1).padStart(2,'0')+'-'+String(sf.getDate()).padStart(2,'0'));var cc=new Date(p);cc.setDate(cc.getDate()+60);f.push(cc.getFullYear()+'-'+String(cc.getMonth()+1).padStart(2,'0')+'-'+String(cc.getDate()).padStart(2,'0'));}return f;}
 var FERIADOS=geraFeriados(2026,new Date().getFullYear()+1);
 
-var META_CORRETOR={}; // populated by fetchMetas
+var META_CORRETOR={};
 var KW_INT=['interna','autocello','macro','interno'];
 var KW_EXT={Joao:['joao','joão'],Bernardo:['bernardo'],Renata:['renata'],Agger:['agger']};
 var EQCFG={Joao:{nome:'João',cor:'#3535C0',bg:'#EEEEFF'},Bernardo:{nome:'Bernardo',cor:'#0A6B54',bg:'#E0FDF6'},Renata:{nome:'Renata',cor:'#8B1A90',bg:'#FDE8FD'},Agger:{nome:'Agger',cor:'#5C6200',bg:'#F6FBDA'}};
@@ -251,7 +249,6 @@ var filtroExt=null,filtroInt=null;
 var dadosExt=null,dadosBase=null,dadosMetas=null;
 var mesAntData=null;
 
-// ── Registro centralizado de Charts — CORREÇÃO PRINCIPAL ──
 var _charts={};
 function destroyChart(key){if(_charts[key]){try{_charts[key].destroy();}catch(e){}delete _charts[key];}}
 function destroyAllCharts(){Object.keys(_charts).forEach(destroyChart);}
@@ -277,8 +274,9 @@ function expandCard(title,content,id,openByDefault){
   return '<div class="'+cls+'" id="ec-'+id+'"><div class="ec-head" onclick="this.parentElement.classList.toggle(\'open\')"><span class="ec-tit">'+title+'</span><span class="ec-arr">▼</span></div><div class="ec-body">'+content+'</div></div>';
 }
 
+
 // ============================================================
-// CSV PARSER — robusto com detecção de colunas por header
+// CSV PARSER
 // ============================================================
 function parseCSVLine(line){
   var cols=[],inQ=false,cur='';
@@ -293,12 +291,10 @@ function parseCSVLine(line){
 }
 
 function findCol(idx){
-  // Primeiro: busca exata pelo nome normalizado
   for(var i=1;i<arguments.length;i++){
     var k=n(arguments[i]);
     if(idx[k]!==undefined)return idx[k];
   }
-  // Segundo: busca parcial (header contém o termo OU termo contém o header)
   var keys=Object.keys(idx);
   for(var i=1;i<arguments.length;i++){
     var k=n(arguments[i]);
@@ -316,7 +312,6 @@ function parseCSV(txt){
   var idx={};
   cols.forEach(function(c,i){idx[n(c)]=i;});
 
-  // Detecta colunas por nome — com fallback para índices fixos do layout padrão
   var fc=function(){
     var args=Array.prototype.slice.call(arguments);
     var fallback=typeof args[args.length-1]==='number'?args.pop():-1;
@@ -363,16 +358,12 @@ async function fetchRows(aba){
   var baseUrl='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv';
   var urlGid=GIDS[aba]?baseUrl+'&gid='+GIDS[aba]:null;
   var urlName=baseUrl+'&sheet='+encodeURIComponent(aba);
-  
-  // Tenta GID primeiro (mais confiável), depois nome como fallback
   var urls=urlGid?[urlGid,urlName]:[urlName];
-  
   for(var i=0;i<urls.length;i++){
     try{
       var r=await fetch(urls[i]);
       if(!r.ok)continue;
       var txt=await r.text();
-      // Valida que o CSV tem pelo menos um header e uma linha de dados
       if(!txt||!txt.includes(','))continue;
       var linhas=txt.split('\n').filter(function(l){return l.trim();});
       if(linhas.length<2)continue;
@@ -384,7 +375,7 @@ async function fetchRows(aba){
 }
 
 // ============================================================
-// CADASTROS — CORRIGIDO: usa detecção de header
+// CADASTROS
 // ============================================================
 async function fetchCadastros(){
   try{
@@ -413,7 +404,7 @@ async function fetchCadastros(){
 }
 
 // ============================================================
-// SCRIPT-MANUAL — CORRIGIDO: usa detecção de header
+// SCRIPT-MANUAL
 // ============================================================
 async function fetchScriptManual(){
   try{
@@ -443,11 +434,11 @@ async function fetchScriptManual(){
 }
 
 // ============================================================
-// BASE CORRETOR — CORRIGIDO: usa SHEET_CAD + detecção de header
+// BASE CORRETOR — FIX #1: SHEET_CAD instead of SHEET
 // ============================================================
 async function fetchBaseCorretor(){
   try{
-    var url='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE;
+    var url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_BASE;
     var r=await fetch(url);if(!r.ok)return null;
     var txt=await r.text();if(!txt||!txt.includes(','))return null;
     var linhas=txt.split('\n');if(linhas.length<2)return null;
@@ -480,12 +471,12 @@ async function fetchBaseCorretor(){
 }
 
 // ============================================================
-// NOVOS CORRETORES — CORRIGIDO: usa SHEET_CAD
+// NOVOS CORRETORES — FIX #2: SHEET_CAD instead of SHEET for rBase
 // ============================================================
 async function fetchNovosCorretores(){
   try{
     var hoje=new Date();var mesAtual=hoje.getMonth();var anoAtual=hoje.getFullYear();
-    var rBase=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE);
+    var rBase=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_BASE);
     var rCad=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
     if(!rBase.ok||!rCad.ok)return null;
     var txtBase=await rBase.text();var txtCad=await rCad.text();
@@ -521,6 +512,7 @@ async function fetchNovosCorretores(){
     return{novos:novos,total:novos.length};
   }catch(e){console.warn('fetchNovosCorretores:',e);return null;}
 }
+
 
 // ============================================================
 // UTILITÁRIOS
@@ -558,12 +550,10 @@ function rendVelocimetro(canvasId,pct,pctP,chartKey){
   registerChart(chartKey,new Chart(cv,{type:'doughnut',data:{datasets:[{data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctP,100),Math.max(0,100-pctP)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}}));
 }
 
-// Encontra o índice de coluna que corresponde ao mês selecionado
 function findMetaMes(aba,meses){
   var nAba=n(aba);
   for(var i=0;i<meses.length;i++){
     if(n(meses[i])===nAba)return i;
-    // Parcial: "março/2026" match "marco/2026"
     var nM=n(meses[i]);
     if(nAba.split('/')[0]===nM.split('/')[0]&&nAba.split('/')[1]===nM.split('/')[1])return i;
   }
@@ -572,7 +562,6 @@ function findMetaMes(aba,meses){
 
 async function fetchMetas(){
   try{
-    // ── INTERNO ──
     var urlInt='https://docs.google.com/spreadsheets/d/'+SHEET_META+'/export?format=csv&gid=0';
     var rInt=await fetch(urlInt);
     if(rInt.ok){
@@ -580,7 +569,6 @@ async function fetchMetas(){
       var linhasInt=txtInt.split('\n').filter(function(l){return l.trim();});
       if(linhasInt.length>=2){
         var headerInt=parseCSVLine(linhasInt[0]);
-        // Meses são colunas a partir de B (index 1)
         var mesesInt=headerInt.slice(1).filter(function(m){return m.trim();});
         var corretores={};
         var totais=[];
@@ -590,25 +578,21 @@ async function fetchMetas(){
           var nome=(cols[0]||'').trim();
           if(!nome)continue;
           var nNome=n(nome);
-          // Detecta linha de "meta total"
           if(nNome.includes('meta total')||nNome.includes('metal total')){
             metaTotalRow=cols;
             continue;
           }
-          // Cada coluna B,C,D... tem o valor de meta do corretor para aquele mês
           var metasPorMes=[];
           for(var j=1;j<cols.length;j++){
             metasPorMes.push(parseInt(cols[j])||0);
           }
           corretores[nome]=metasPorMes;
         }
-        // Totais por mês
         if(metaTotalRow){
           for(var j=1;j<metaTotalRow.length;j++){
             totais.push(parseInt(metaTotalRow[j])||0);
           }
         }else{
-          // Calcula totais somando
           for(var mi=0;mi<mesesInt.length;mi++){
             var soma=0;
             for(var cn in corretores){if(corretores.hasOwnProperty(cn))soma+=(corretores[cn][mi]||0);}
@@ -616,8 +600,6 @@ async function fetchMetas(){
           }
         }
         METAS_INT_DATA={meses:mesesInt,corretores:corretores,totais:totais};
-        
-        // Popula META_CORRETOR para o mês atual
         var mesIdx=findMetaMes(MES,mesesInt);
         if(mesIdx!==null){
           META_CORRETOR={};
@@ -629,8 +611,6 @@ async function fetchMetas(){
         }
       }
     }
-    
-    // ── EXTERNO ──
     var urlExt='https://docs.google.com/spreadsheets/d/'+SHEET_META+'/export?format=csv&gid=228088346';
     var rExt=await fetch(urlExt);
     if(rExt.ok){
@@ -670,7 +650,6 @@ async function fetchMetas(){
 }
 
 function getMetaCorretor(nome){
-  // Tenta match exato primeiro, depois parcial
   if(META_CORRETOR[nome])return META_CORRETOR[nome];
   var nNome=n(nome);
   for(var k in META_CORRETOR){
@@ -689,7 +668,6 @@ function getMetaEquipe(nomeEquipe){
       return METAS_EXT_DATA.equipes[k][mesIdx]||0;
     }
   }
-  // Parcial
   for(var k in METAS_EXT_DATA.equipes){
     if(METAS_EXT_DATA.equipes.hasOwnProperty(k)){
       var nK=n(k);
@@ -719,6 +697,7 @@ function calcDias(aba){
   else{dFalt=todos.length;}
   return{dPass:dPass,dFalt:dFalt,mesEncerrado:dFalt===0&&dPass>0};
 }
+
 
 // ============================================================
 // PROCESSAR EXTERNO
@@ -827,11 +806,12 @@ function buildObjetivo(d,meta,pct,alr){
   return '<div class="objcard"><div class="objtit">Objetivo diário</div><div class="objmain"><div class="objval">'+(d.dFalt>0?d.vdNec.toFixed(1):'—')+'</div><div class="objunit">vendas/dia<br><span style="font-size:10px;color:#5a5a9a">necessárias</span></div></div><div class="objlbl">Faltam <b style="color:'+(d.faltMeta===0?'#2ecc71':'#DFF44C')+'">'+d.faltMeta+'</b> vendas · '+d.dFalt+' dias úteis</div>'+alr+'</div>';
 }
 
+
 // ============================================================
 // RENDER EXTERNO
 // ============================================================
 function rendExt(d){
-  destroyAllCharts(); // CORREÇÃO: destruir charts ANTES de substituir DOM
+  destroyAllCharts();
   var ests=Object.entries(d.porEst).sort(function(a,b){return b[1]-a[1];}).slice(0,12).map(function(e){return e[0];});
   var hojeEq=function(k){return d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';};
   var eqC=['Joao','Bernardo','Renata','Agger'].map(function(k){var cfg=EQCFG[k],s=d.porEq[k];var faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';var mEq=getMetaEquipe(cfg.nome);var faltEq=mEq>0?Math.max(0,mEq-s.v):null;return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'"><span class="eqdot" style="background:'+cfg.cor+'"></span><span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span><div style="text-align:right"><div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div>'+(mEq>0?'<div style="font-size:9px;color:'+cfg.cor+';opacity:.7">Meta '+mEq+(faltEq>0?' · faltam '+faltEq:' ✅')+'</div>':'')+'<div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div></div></div>';}).join('');
@@ -865,7 +845,6 @@ function rendExt(d){
     expandCard('Ranking de vendedores','<div style="overflow-x:auto"><table class="rt"><thead><tr><th>#</th><th>Vendedor</th><th>Equipe</th><th class="tr">Vendas</th><th class="tr">Adesão</th></tr></thead><tbody>'+rR+'</tbody></table></div>','ranking',false)+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
 
-  // Renderiza charts APÓS DOM estar no lugar
   var porDiaG=filtroExt&&d.porDiaEq&&d.porDiaEq[filtroExt]?d.porDiaEq[filtroExt]:d.porDia;
   rendGraficoDiario('gcDiarioExt',porDiaG,EQCFG[filtroExt]?EQCFG[filtroExt].cor:'#5353E9','GDE');
   rendVelocimetro('gcVelE',pctE,pctPE,'GVE');
@@ -883,6 +862,7 @@ function rendNovosCorretores(data){var el=document.getElementById('painel-novos'
 function rendCorretoresEstado(data){var el=document.getElementById('painel-estado');if(!el)return;function pillsHtml(lista,cor,numCor){return lista.map(function(e){return '<div style="display:inline-flex;align-items:center;gap:5px;background:'+cor+'22;border:1px solid '+cor+'55;border-radius:20px;padding:3px 10px;font-size:12px;color:'+cor+'"><b style="color:'+numCor+';font-size:13px">'+e[1]+'</b>'+e[0]+'</div>';}).join('');}el.innerHTML='<div class="sectit">Corretores por estado — João · Renata · Bernardo</div><div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+data.totalJRB+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.jrb,'#5353E9','#000000')+'</div></div><div class="sectit">Corretores por estado — Agger</div><div style="background:var(--dark);border-radius:14px;padding:1.25rem;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><span style="font-size:11px;color:#6060A0">Total: <b style="color:var(--limao)">'+data.totalAgger+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.agger,'#AFF9E4','#fff')+'</div></div>';}
 
 function rendPainelCad(cad){var painel=document.getElementById('painel-cad');if(!painel)return;var EQ=[{k:'Joao',nome:'João',cor:'#3535C0',bg:'#EEEEFF'},{k:'Bernardo',nome:'Bernardo',cor:'#0A6B54',bg:'#E0FDF6'},{k:'Renata',nome:'Renata',cor:'#8B1A90',bg:'#FDE8FD'},{k:'Agger',nome:'Agger',cor:'#5C6200',bg:'#F6FBDA'}];var cards=EQ.map(function(e){var qtd=cad.porEq[e.k]||0;var pct=cad.total>0?Math.round((qtd/cad.total)*100):0;return '<div style="background:'+e.bg+';border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:'+e.cor+'"></span><span style="font-size:13px;font-weight:600;color:'+e.cor+';flex:1">'+e.nome+'</span><div style="text-align:right"><div style="font-size:22px;font-weight:800;color:'+e.cor+'">'+qtd+'</div><div style="font-size:10px;color:'+e.cor+';opacity:.7">'+pct+'%</div></div></div>';}).join('');painel.innerHTML='<div class="sectit">Corretores cadastrados por equipe</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px">'+cards+'</div><div style="font-size:11px;color:var(--sub);text-align:right;margin-bottom:20px">Total: <b style="color:var(--dark)">'+cad.total+'</b> corretores ativos</div>';}
+
 
 // ============================================================
 // RENDER INTERNO
@@ -958,8 +938,9 @@ function rendTotal(d){
   rendVelocimetro('gcVelTotal',pct,pctP,'GVT');
 }
 
+
 // ============================================================
-// CONTROLE — com proteção contra callbacks obsoletos
+// CONTROLE — FIX #3: null-checks on getElementById
 // ============================================================
 function setView(v){VIEW=v;filtroInt=null;filtroExt=null;document.getElementById('btn-ext').classList.toggle('on',v==='ext');document.getElementById('btn-int').classList.toggle('on',v==='int');document.getElementById('btn-total').classList.toggle('on',v==='total');atualizar();}
 function trocarMes(v){MES=v;filtroInt=null;filtroExt=null;mesAntData=null;atualizar();}
@@ -968,8 +949,8 @@ function popularSel(){var s=document.getElementById('mes-sel');s.innerHTML='';ME
 async function atualizar(){
   var thisVersion=++_renderVersion;
   try{
-    document.getElementById('ts').textContent='Atualizando...';
-    // Busca metas sempre (recalcula META_CORRETOR para o mês selecionado)
+    var tsEl=document.getElementById('ts');
+    if(tsEl) tsEl.textContent='Atualizando...';
     await fetchMetas().catch(function(){});
     var rows=await fetchRows(MES);
     if(thisVersion!==_renderVersion)return;
@@ -978,7 +959,6 @@ async function atualizar(){
       var dExt=procExt(rows,MES);
       dadosExt=dExt;
       rendExt(dExt);
-      // Callbacks assíncronos com proteção de versão
       fetchMesAnterior().then(function(ant){if(thisVersion!==_renderVersion)return;mesAntData=ant;rendExt(dExt);}).catch(function(){});
       fetchCadastros().then(function(cad){if(thisVersion!==_renderVersion)return;if(cad)rendPainelCad(cad);}).catch(function(){});
       fetchScriptManual().then(function(data){if(thisVersion!==_renderVersion)return;if(data)rendCorretoresEstado(data);}).catch(function(){});
@@ -991,12 +971,17 @@ async function atualizar(){
       rendTotal(dTotal);
       fetchMesAnterior().then(function(ant){if(thisVersion!==_renderVersion)return;mesAntData=ant;rendTotal(dTotal);}).catch(function(){});
     }
-    if(thisVersion===_renderVersion)document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
+    if(thisVersion===_renderVersion){
+      var tsEl2=document.getElementById('ts');
+      if(tsEl2) tsEl2.textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
+    }
   }catch(e){
     if(thisVersion===_renderVersion){
       destroyAllCharts();
-      document.getElementById('root').innerHTML='<div class="smsg err"><div class="ico">❌</div>'+e.message+'<br><br><small>Verifique se a aba existe e a planilha está pública.</small></div>';
-      document.getElementById('ts').textContent='Erro';
+      var rootEl=document.getElementById('root');
+      if(rootEl) rootEl.innerHTML='<div class="smsg err"><div class="ico">❌</div>'+e.message+'<br><br><small>Verifique se a aba existe e a planilha está pública.</small></div>';
+      var tsEl3=document.getElementById('ts');
+      if(tsEl3) tsEl3.textContent='Erro';
     }
   }
 }
