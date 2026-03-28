@@ -434,11 +434,11 @@ async function fetchScriptManual(){
 }
 
 // ============================================================
-// BASE CORRETOR — FIX #1: SHEET_CAD instead of SHEET
+// BASE CORRETOR — aba "base corretor" está em SHEET (planilha de vendas)
 // ============================================================
 async function fetchBaseCorretor(){
   try{
-    var url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_BASE;
+    var url='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE;
     var r=await fetch(url);if(!r.ok)return null;
     var txt=await r.text();if(!txt||!txt.includes(','))return null;
     var linhas=txt.split('\n');if(linhas.length<2)return null;
@@ -471,12 +471,12 @@ async function fetchBaseCorretor(){
 }
 
 // ============================================================
-// NOVOS CORRETORES — FIX #2: SHEET_CAD instead of SHEET for rBase
+// NOVOS CORRETORES — rBase usa SHEET (planilha de vendas, aba "base corretor")
 // ============================================================
 async function fetchNovosCorretores(){
   try{
     var hoje=new Date();var mesAtual=hoje.getMonth();var anoAtual=hoje.getFullYear();
-    var rBase=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_BASE);
+    var rBase=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE);
     var rCad=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
     if(!rBase.ok||!rCad.ok)return null;
     var txtBase=await rBase.text();var txtCad=await rCad.text();
