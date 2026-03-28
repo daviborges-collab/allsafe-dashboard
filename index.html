@@ -185,6 +185,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.1)}
     <div class="tog">
       <button class="tog-btn on" id="btn-ext" onclick="setView('ext')">Externo</button>
       <button class="tog-btn" id="btn-int" onclick="setView('int')">Interno</button>
+      <button class="tog-btn" id="btn-total" onclick="setView('total')">Total</button>
     </div>
     <select class="mes-sel" id="mes-sel" onchange="trocarMes(this.value)"></select>
     <div class="live"><div class="live-dot"></div>Ao vivo</div>
@@ -268,7 +269,7 @@ const STATUS_OK=['ativo','pendente de analise','autorizado'];
 let VIEW='ext',MES='',GR=null,GV=null;
 let filtroExt=null,filtroInt=null;
 let dadosExt=null,dadosBase=null,dadosMetas=null;
-let GDE=null,GDI=null;
+let GDE=null,GDI=null,GDT=null,GVT=null;
 let mesAntData=null;
 
 // ============================================================
@@ -800,9 +801,163 @@ function rendInt(d){
 }
 
 // ============================================================
+// PROCESSAR TOTAL (Externo + Interno)
+// ============================================================
+function procTotal(rows,aba){
+  const hoje=new Date();const hojeStr=hojeLocal();
+  const v=rows.filter(r=>STATUS_OK.includes(n(r.status)));
+  let tot=0,totV=0,vendHoje=0;
+  const porDia={};
+  const porCat={};
+  const porTipo={};
+  // Separados para destaque
+  let extV=0,extVal=0,intV=0,intVal=0;
+  v.forEach(r=>{
+    let dStr='';const dia=r.data?r.data.slice(0,5):null;
+    if(r.data){const pts=r.data.split('/');if(pts.length===3)dStr=pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');else dStr=r.data.slice(0,10);}
+    if(dStr===hojeStr)vendHoje++;
+    if(dia)porDia[dia]=(porDia[dia]||0)+1;
+    tot++;totV+=r.valor;
+    // Ext vs Int
+    if(ehInt(r.equipe)){intV++;intVal+=r.valor;}else{extV++;extVal+=r.valor;}
+    // Categoria
+    var cat='';
+    if(r.veiculo==='MOTO')cat='Moto';
+    else if(n(r.uso).includes('taxi'))cat='Táxi';
+    else if(n(r.uso).includes('aplic')||n(r.uso).includes('profiss'))cat='Aplicativo';
+    else cat='Particular';
+    porCat[cat]=(porCat[cat]||0)+1;
+    // Origem
+    var tipo=r.tipoNeg||'Não informado';
+    porTipo[tipo]=(porTipo[tipo]||0)+1;
+  });
+  // Dias úteis
+  const partes=aba.split('/');
+  const mNorm=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const mIdx=mNorm.indexOf(n(partes[0]));const ano=parseInt(partes[1])||hoje.getFullYear();
+  const eMes=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano);
+  let dPass=0,dFalt=0;
+  if(mIdx>=0){const todos=diasUtil(ano,mIdx);if(eMes){dPass=todos.filter(d=>d<=hoje).length;dFalt=todos.filter(d=>d>hoje).length;}else if(hoje>new Date(ano,mIdx+1,0)){dPass=todos.length;}else{dFalt=diasUtil(ano,mIdx).length;}}
+  const metaTotal=getMetaInt(aba)+getMetaExt(aba);
+  const proj=dPass>0?Math.round((tot/dPass)*(dPass+dFalt)):tot;
+  const faltMeta=Math.max(0,metaTotal-tot);
+  const ritmo=dPass>0?(tot/dPass):0;
+  const vdNec=dFalt>0?(faltMeta/dFalt):0;
+  const dif=vdNec-ritmo;
+  // Tipos filtrados
+  const tiposArr=Object.keys(porTipo).filter(t=>t!=='Não informado').sort();
+  if(porTipo['Não informado'])tiposArr.push('Não informado');
+  const todosNaoInfo=tiposArr.length===1&&tiposArr[0]==='Não informado';
+  // Categorias
+  const catOrd=['Táxi','Aplicativo','Particular','Moto'];
+  const cats=catOrd.filter(c=>porCat[c]);
+  return{tot,totV,ticket:tot?totV/tot:0,vendHoje,porDia,proj,dPass,dFalt,metaTotal,faltMeta,ritmo,vdNec,dif,
+    extV,extVal,intV,intVal,porCat,cats,porTipo,tipos:todosNaoInfo?[]:tiposArr};
+}
+
+// ============================================================
+// RENDER TOTAL
+// ============================================================
+function rendTotal(d){
+  var pct=d.metaTotal>0?Math.min(100,Math.round((d.tot/d.metaTotal)*100)):0;
+  var pctP=d.metaTotal>0?Math.min(100,Math.round((d.proj/d.metaTotal)*100)):0;
+
+  // Alerta objetivo
+  var alr='';
+  if(d.faltMeta===0)alr='<div class="objalr verd"><span class="objdiff">✅ Meta atingida!</span>Parabéns!</div>';
+  else if(d.dif>0)alr='<div class="objalr verm"><span class="objdiff">⚡ +'+d.dif.toFixed(1)+' vendas/dia</span>Precisa acelerar (ritmo atual: '+d.ritmo.toFixed(1)+'/dia)</div>';
+  else alr='<div class="objalr verd"><span class="objdiff">✅ No caminho certo</span>Ritmo atual suficiente.</div>';
+
+  // Comparativo mês anterior
+  var compTot='',compVal='',compTick='';
+  if(mesAntData){
+    var antTot=(mesAntData.ext.tot||0)+(mesAntData.int.tot||0);
+    var antVal=(mesAntData.ext.totV||0)+(mesAntData.int.totV||0);
+    compTot=kpiComp(d.tot,antTot);
+    compVal=kpiComp(d.totV,antVal);
+    if(d.tot&&antTot)compTick=kpiComp(d.totV/d.tot,antVal/antTot);
+  }
+
+  // Destaque comercial
+  var extTicket=d.extV>0?(d.extVal/d.extV):0;
+  var intTicket=d.intV>0?(d.intVal/d.intV):0;
+  var destNome=d.extV>=d.intV?'Comercial Externo':'Comercial Interno';
+  var destV=Math.max(d.extV,d.intV);
+  var destVal=d.extV>=d.intV?d.extVal:d.intVal;
+
+  // Tabela origem de vendas (sem nomes)
+  var tpHd=d.tipos.map(function(t){return '<th style="text-align:center">'+t+'</th>';}).join('');
+  var tpCells=d.tipos.map(function(t){return '<td style="text-align:center;font-weight:700">'+(d.porTipo[t]||0)+'</td>';}).join('');
+  var tpTotal=d.tipos.reduce(function(s,t){return s+(d.porTipo[t]||0);},0);
+
+  // Tabela vendas por categoria (sem nomes)
+  var catHd=d.cats.map(function(c){return '<th style="text-align:center">'+c+'</th>';}).join('');
+  var catCells=d.cats.map(function(c){return '<td style="text-align:center;font-weight:700">'+(d.porCat[c]||0)+'</td>';}).join('');
+  var catTotal=d.cats.reduce(function(s,c){return s+(d.porCat[c]||0);},0);
+
+  document.getElementById('root').innerHTML=
+    // KPIs
+    '<div class="krow">'+
+      '<div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+compTot+'<div class="kdeco">📋</div></div>'+
+      '<div class="kpi kr"><div class="klbl">Faturamento total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Externo + Interno</div>'+compVal+'<div class="kdeco">💰</div></div>'+
+      '<div class="kpi km"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div>'+compTick+'<div class="kdeco">📈</div></div>'+
+    '</div>'+
+    // Gráfico diário
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioTotal"></canvas></div></div>'+
+    // Destaque comercial + Tendência
+    '<div class="g2" style="margin-bottom:12px">'+
+      '<div class="dest" style="min-height:0">'+
+        '<div class="destlbl">🏆 Comercial em destaque</div>'+
+        '<div class="destnom" style="font-size:18px;margin-bottom:8px">'+destNome+'</div>'+
+        '<div class="destst">'+
+          '<div><div class="destsl">Vendas</div><div class="destsv">'+destV+'</div></div>'+
+          '<div><div class="destsl">Faturamento</div><div class="destsv" style="font-size:13px">'+fR(destVal)+'</div></div>'+
+        '</div>'+
+        '<div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">'+
+          '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:8px 14px;flex:1;min-width:120px">'+
+            '<div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Externo</div>'+
+            '<div style="font-size:18px;font-weight:800">'+d.extV+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.5)">'+fR(d.extVal)+'</div>'+
+          '</div>'+
+          '<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:8px 14px;flex:1;min-width:120px">'+
+            '<div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Interno</div>'+
+            '<div style="font-size:18px;font-weight:800">'+d.intV+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.5)">'+fR(d.intVal)+'</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tendcard"><div class="tendl"><div class="tslbl az">📊 Tendência de vendas</div><div class="tsbig">'+fN(d.proj)+'</div><div class="tssub">Projeção para o fim do mês</div><div class="tsdet">Dias passados: <b style="color:#93ADFC">'+d.dPass+'</b><br>Dias restantes: <b style="color:#AFF9E4">'+d.dFalt+'</b></div></div><div class="tendr"><div class="tslbl mn">Ritmo atual</div><div class="rval">'+d.ritmo.toFixed(1)+'</div><div class="rlbl">vendas/dia</div></div></div>'+
+    '</div>'+
+    // Meta + Objetivo
+    '<div class="g2" style="margin-bottom:12px">'+
+      '<div class="velcard"><div class="veltit">Meta mensal combinada</div><canvas id="gcVelTotal" width="260" height="150"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:500">/ '+fN(d.metaTotal)+'</span></div><div class="velm">'+pct+'% atingido</div></div></div>'+
+      '<div class="objcard"><div class="objtit">Objetivo diário</div><div class="objmain"><div class="objval">'+(d.dFalt>0?d.vdNec.toFixed(1):'—')+'</div><div class="objunit">vendas/dia<br><span style="font-size:10px;color:#5a5a9a">necessárias</span></div></div><div class="objlbl">Faltam <b style="color:'+(d.faltMeta===0?'#2ecc71':'#DFF44C')+'">'+d.faltMeta+'</b> vendas · '+d.dFalt+' dias úteis</div>'+alr+'</div>'+
+    '</div>'+
+    // Tabela origem de vendas
+    expandCard('Origem de venda',
+      (d.tipos.length===0
+        ?'<div style="padding:1rem;color:var(--sub);font-size:13px">Dados de origem não disponíveis neste mês.</div>'
+        :'<div style="overflow-x:auto"><table class="it"><thead><tr>'+tpHd+'<th style="text-align:center;color:#5353E9">Total</th></tr></thead><tbody><tr>'+tpCells+'<td style="text-align:center;font-weight:800;color:#5353E9">'+tpTotal+'</td></tr></tbody></table></div>'
+      ),'total-origem',true)+
+    // Tabela vendas por categoria
+    expandCard('Vendas por categoria',
+      '<div style="overflow-x:auto"><table class="it"><thead><tr>'+catHd+'<th style="text-align:center;color:#5353E9">Total</th></tr></thead><tbody><tr>'+catCells+'<td style="text-align:center;font-weight:800;color:#5353E9">'+catTotal+'</td></tr></tbody></table></div>'
+    ,'total-cat',true)+
+    '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
+
+  // Gráfico diário
+  rendGraficoDiario('gcDiarioTotal',d.porDia,'#5353E9','GDT');
+
+  // Velocímetro
+  if(GVT){GVT.destroy();GVT=null;}
+  var cvt=document.getElementById('gcVelTotal');
+  if(cvt)GVT=new Chart(cvt,{type:'doughnut',data:{datasets:[{data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctP,100),Math.max(0,100-pctP)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+}
+
+// ============================================================
 // CONTROLE
 // ============================================================
-function setView(v){VIEW=v;filtroInt=null;filtroExt=null;document.getElementById('btn-ext').classList.toggle('on',v==='ext');document.getElementById('btn-int').classList.toggle('on',v==='int');atualizar();}
+function setView(v){VIEW=v;filtroInt=null;filtroExt=null;document.getElementById('btn-ext').classList.toggle('on',v==='ext');document.getElementById('btn-int').classList.toggle('on',v==='int');document.getElementById('btn-total').classList.toggle('on',v==='total');atualizar();}
 function trocarMes(v){MES=v;filtroInt=null;filtroExt=null;mesAntData=null;atualizar();}
 function popularSel(){var s=document.getElementById('mes-sel');s.innerHTML='';MESES.forEach(function(m){var o=document.createElement('option');o.value=m;o.textContent=m;if(m===MES)o.selected=true;s.appendChild(o);});}
 
@@ -820,8 +975,12 @@ async function atualizar(){
       fetchScriptManual().then(function(data){if(data)rendCorretoresEstado(data);}).catch(function(){});
       fetchBaseCorretor().then(function(data){dadosBase=data;if(data)rendBaseCorretor(data);}).catch(function(){});
       fetchNovosCorretores().then(function(data){if(data)rendNovosCorretores(data);}).catch(function(){});
-    } else {
+    } else if(VIEW==='int'){
       rendInt(procInt(rows,MES));
+    } else {
+      var dTotal=procTotal(rows,MES);
+      rendTotal(dTotal);
+      fetchMesAnterior().then(function(ant){mesAntData=ant;rendTotal(dTotal);}).catch(function(){});
     }
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
   }catch(e){
