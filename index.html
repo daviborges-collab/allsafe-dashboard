@@ -196,71 +196,14 @@ var GIDS={
   'Abril/2026':'1120669083',
 };
 
-// Auto-descoberta de GIDs: lê a página HTML da planilha para extrair nomes e gids de todas as abas
-async function descobrirGIDs(){
-  try{
-    var url='https://docs.google.com/spreadsheets/d/'+SHEET+'/edit';
-    var r=await fetch(url);
-    if(!r.ok)return;
-    var html=await r.text();
-    // Google Sheets embute info das abas no HTML em formato JSON-like
-    // Padrão 1: "gid":"XXXXX" junto com "name":"Mês/Ano"
-    // Padrão 2: ritz.Sheets array com sheetId e properties.title
-    var encontrados={};
-    
-    // Tenta extrair do HTML usando regex nos dados embutidos
-    // Formato comum: {"sheetId":378303393,...,"title":"Janeiro/2026"}
-    var re1=/["']sheetId["']\s*:\s*(\d+)[^}]*?["']title["']\s*:\s*["']([^"']+)["']/g;
-    var m1;
-    while((m1=re1.exec(html))!==null){
-      encontrados[m1[2]]=m1[1];
-    }
-    // Formato alternativo: title primeiro, sheetId depois
-    var re2=/["']title["']\s*:\s*["']([^"']+)["'][^}]*?["']sheetId["']\s*:\s*(\d+)/g;
-    var m2;
-    while((m2=re2.exec(html))!==null){
-      if(!encontrados[m2[1]])encontrados[m2[1]]=m2[2];
-    }
-    // Formato: gid=XXXXX no link com nome da aba
-    var re3=/gid[=:](\d+)[^>]*>([^<]+)</g;
-    var m3;
-    while((m3=re3.exec(html))!==null){
-      var nome=m3[2].trim();
-      if(nome.includes('/')&&!encontrados[nome])encontrados[nome]=m3[1];
-    }
-    
-    // Atualiza GIDS com os encontrados
-    var count=0;
-    for(var nome in encontrados){
-      if(encontrados.hasOwnProperty(nome)){
-        GIDS[nome]=encontrados[nome];
-        count++;
-      }
-    }
-    if(count>0)console.log('Auto-descoberta: '+count+' abas encontradas',GIDS);
-  }catch(e){
-    console.warn('Auto-descoberta de GIDs falhou, usando fallbacks:',e);
-  }
-}
-
 async function detectarMeses(){
-  // Primeiro tenta auto-descobrir GIDs
-  await descobrirGIDs();
-  
   var candidatos=gerarCandidatosMeses();
   try{
     var results=await Promise.allSettled(candidatos.map(function(aba){
-      var url;
-      if(GIDS[aba]){
-        url='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GIDS[aba];
-      }else{
-        url='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&sheet='+encodeURIComponent(aba);
-      }
-      return fetch(url).then(function(r){
-        if(!r.ok)return null;
-        // Se encontrou via nome e não tinha GID, tenta extrair o GID real do redirect
-        return aba;
-      }).catch(function(){return null;});
+      var url=GIDS[aba]
+        ?'https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GIDS[aba]
+        :'https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&sheet='+encodeURIComponent(aba);
+      return fetch(url).then(function(r){return r.ok?aba:null;}).catch(function(){return null;});
     }));
     var found=results.map(function(r){return r.status==='fulfilled'?r.value:null;}).filter(Boolean);
     if(found.length)return found;
