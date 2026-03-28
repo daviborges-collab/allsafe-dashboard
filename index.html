@@ -461,10 +461,35 @@ async function fetchBaseCorretor(){
       porCon[consultor].itens++;
       if(dt&&(!porCon[consultor].primeiraData||dt<porCon[consultor].primeiraData))porCon[consultor].primeiraData=dt;
     }
+    // Busca mapa de time de vendas via cadastrados (Nome Consultor → Time de Vendas)
+    var mapaTime={};
+    try{
+      var rCad=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
+      if(rCad.ok){
+        var txtCad=await rCad.text();
+        var cadLinhas=txtCad.split('\n');
+        if(cadLinhas.length>=2){
+          var cadHeaders=parseCSVLine(cadLinhas[0]);
+          var cadIdx={};cadHeaders.forEach(function(h,i){cadIdx[n(h)]=i;});
+          var cadINome=findCol(cadIdx,'Nome Consultor','nome consultor','consultor','nome');
+          var cadITime=findCol(cadIdx,'Time de Vendas','time de vendas','equipe','time');
+          if(cadINome>=0&&cadITime>=0){
+            for(var ci=1;ci<cadLinhas.length;ci++){
+              if(!cadLinhas[ci].trim())continue;
+              var cc=parseCSVLine(cadLinhas[ci]);
+              var cadNome=(cc[cadINome]||'').trim();
+              var cadTime=(cc[cadITime]||'').trim();
+              if(cadNome&&cadTime)mapaTime[n(cadNome)]=cadTime;
+            }
+          }
+        }
+      }
+    }catch(e2){console.warn('fetchBaseCorretor mapaTime:',e2);}
     var top10=Object.entries(porCon).sort(function(a,b){return b[1].itens-a[1].itens;}).slice(0,10).map(function(e){
       var nm=e[0],d=e[1];var vmMes=null;
       if(d.primeiraData){var meses=(hoje.getFullYear()-d.primeiraData.getFullYear())*12+(hoje.getMonth()-d.primeiraData.getMonth())+1;vmMes=meses>0?(d.itens/meses).toFixed(1):String(d.itens);}
-      return{nome:nm,itens:d.itens,desde:d.primeiraData?d.primeiraData.toLocaleDateString('pt-BR'):'-',vmMes:vmMes};
+      var time=mapaTime[n(nm)]||'—';
+      return{nome:nm,itens:d.itens,desde:d.primeiraData?d.primeiraData.toLocaleDateString('pt-BR'):'-',vmMes:vmMes,time:time};
     });
     return{top10:top10};
   }catch(e){console.warn('fetchBaseCorretor:',e);return null;}
@@ -475,7 +500,8 @@ async function fetchBaseCorretor(){
 // ============================================================
 async function fetchNovosCorretores(){
   try{
-    var hoje=new Date();var mesAtual=hoje.getMonth();var anoAtual=hoje.getFullYear();
+    var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    var partes=MES.split('/');var mesAtual=mN.indexOf(n(partes[0]));var anoAtual=parseInt(partes[1])||new Date().getFullYear();
     var rBase=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE);
     var rCad=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
     if(!rBase.ok||!rCad.ok)return null;
@@ -855,9 +881,9 @@ function rendExt(d){
   }
 }
 
-function rendBaseCorretor(data){var el=document.getElementById('painel-base');if(!el)return;var medals=['🥇','🥈','🥉'];var rows=data.top10.map(function(c,i){var pos=i+1,pc=pos<=3?'p'+pos:'';return '<tr><td><span class="pos '+pc+'">'+(pos<=3?medals[i]:pos)+'</span></td><td class="fw">'+c.nome+'</td><td class="tr fw" style="color:#5353E9">'+c.itens+'</td><td class="tr" style="color:var(--sub);font-size:11px">'+c.desde+'</td><td class="tr fw" style="color:var(--menta)">'+(c.vmMes||'—')+'</td></tr>';}).join('');el.innerHTML=expandCard('Top 10 corretores — carteira ativa','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th class="tr">Itens</th><th class="tr">1ª venda</th><th class="tr">Média/mês</th></tr></thead><tbody>'+rows+'</tbody></table></div>','top10',false);}
+function rendBaseCorretor(data){var el=document.getElementById('painel-base');if(!el)return;var medals=['🥇','🥈','🥉'];var rows=data.top10.map(function(c,i){var pos=i+1,pc=pos<=3?'p'+pos:'';return '<tr><td><span class="pos '+pc+'">'+(pos<=3?medals[i]:pos)+'</span></td><td class="fw">'+c.nome+'</td><td style="font-size:11px;color:var(--sub)">'+(c.time||'—')+'</td><td class="tr fw" style="color:#5353E9">'+c.itens+'</td><td class="tr" style="color:var(--sub);font-size:11px">'+c.desde+'</td><td class="tr fw" style="color:var(--menta)">'+(c.vmMes||'—')+'</td></tr>';}).join('');el.innerHTML=expandCard('Top 10 corretores — carteira ativa','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Time</th><th class="tr">Itens</th><th class="tr">1ª venda</th><th class="tr">Média/mês</th></tr></thead><tbody>'+rows+'</tbody></table></div>','top10',false);}
 
-function rendNovosCorretores(data){var el=document.getElementById('painel-novos');if(!el)return;var hoje=new Date();var titMes=NOMES_MES[hoje.getMonth()]+'/'+hoje.getFullYear();var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Outro':{cor:'#555',bg:'#F5F5F5'}};if(!data.novos.length){el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhuma 1ª venda neste mês.</div>','novos',false);return;}var rows=data.novos.map(function(c,i){var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td><td class="fw">'+c.nome+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td style="font-size:11px;color:var(--sub)">'+c.equipe+'</td><td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td></tr>';}).join('');el.innerHTML=expandCard('🆕 1ª venda em '+titMes+' ('+data.total+')','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th>Time</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);}
+function rendNovosCorretores(data){var el=document.getElementById('painel-novos');if(!el)return;var titMes=MES;var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Outro':{cor:'#555',bg:'#F5F5F5'}};if(!data.novos.length){el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhuma 1ª venda neste mês.</div>','novos',false);return;}var rows=data.novos.map(function(c,i){var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td><td class="fw">'+c.nome+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td></tr>';}).join('');el.innerHTML=expandCard('🆕 1ª venda em '+titMes+' ('+data.total+')','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);}
 
 function rendCorretoresEstado(data){var el=document.getElementById('painel-estado');if(!el)return;function pillsHtml(lista,cor,numCor){return lista.map(function(e){return '<div style="display:inline-flex;align-items:center;gap:5px;background:'+cor+'22;border:1px solid '+cor+'55;border-radius:20px;padding:3px 10px;font-size:12px;color:'+cor+'"><b style="color:'+numCor+';font-size:13px">'+e[1]+'</b>'+e[0]+'</div>';}).join('');}el.innerHTML='<div class="sectit">Corretores por estado — João · Renata · Bernardo</div><div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+data.totalJRB+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.jrb,'#5353E9','#000000')+'</div></div><div class="sectit">Corretores por estado — Agger</div><div style="background:var(--dark);border-radius:14px;padding:1.25rem;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><span style="font-size:11px;color:#6060A0">Total: <b style="color:var(--limao)">'+data.totalAgger+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.agger,'#AFF9E4','#fff')+'</div></div>';}
 
