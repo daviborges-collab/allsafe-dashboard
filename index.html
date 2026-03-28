@@ -171,7 +171,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.1)}
 <body>
 <div class="header">
   <div class="header-left">
-    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <img class="logo-img" src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAQ4BDgDASIAAhEBAxEB/8QAHAABAAMBAQEBAQAAAAAAAAAAAAUHCAYEAwIB/8QAVRABAAEDAgEFBA4GCQIEBQUAAAECAwQFBhEHCBIhMRM2QVFhcYGxFBI1QkZndJSzwcLSFjNUcqGys8MVI0NicoKUosHC8CQzVJMWRFWD0RhWY+Hx/8QAHAEBAAIDAQEBAAAAAAAAAAAAAAMHBAUGAQII/8QARhEBAAECAwMHCQYDBQgDAAAAAAECAwQFEQYhMxIyQVFxgbEJEzQ1YZGhwtEiQmKCweEWUvAUcpKi8RUjJDRDk8LSJETT/9oADAMBAAIRAxEAPwDkgF8NYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" alt="Allsafe">
     <div class="header-div"></div>
     <h1>Painel de Vendas</h1>
   </div>
@@ -297,15 +297,24 @@ function achaMes(s){
 // Retorna { dStr: 'YYYY-MM-DD', dia: 'DD/MM' } ou { dStr:'', dia:null }
 function parseDateFields(rawData){
   if(!rawData) return {dStr:'',dia:null};
-  var pts=rawData.split('/');
+  var s=rawData.trim();
+  // Formato DD/MM/YYYY ou DD/MM/YYYY HH:MM:SS
+  var pts=s.split('/');
   if(pts.length===3){
     var dd=pts[0].trim().padStart(2,'0');
     var mm=pts[1].trim().padStart(2,'0');
-    var yyyy=pts[2].trim();
+    var yyyy=pts[2].trim().substring(0,4);
     return {dStr:yyyy+'-'+mm+'-'+dd, dia:dd+'/'+mm};
   }
-  // Fallback para formato ISO ou outro
-  return {dStr:rawData.slice(0,10), dia:null};
+  // Formato YYYY-MM-DD ou YYYY-MM-DDTHH:MM:SS
+  var pts2=s.substring(0,10).split('-');
+  if(pts2.length===3&&pts2[0].length===4){
+    var yyyy2=pts2[0];
+    var mm2=pts2[1].padStart(2,'0');
+    var dd2=pts2[2].substring(0,2).padStart(2,'0');
+    return {dStr:yyyy2+'-'+mm2+'-'+dd2, dia:dd2+'/'+mm2};
+  }
+  return {dStr:'', dia:null};
 }
 
 // ============================================================
@@ -514,8 +523,8 @@ function parseMesAno(aba){
   return{mIdx:mIdx,ano:ano,partes:partes};
 }
 
-function rendGraficoDiario(canvasId,porDia,cor,chartVarName){
-  var info=parseMesAno(MES);
+function rendGraficoDiario(canvasId,porDia,cor,chartVarName,abaParam){
+  var info=parseMesAno(abaParam||MES);
   var mIdx=info.mIdx,ano=info.ano;
   if(mIdx<0)return;
   var nDias=new Date(ano,mIdx+1,0).getDate();var hoje=new Date();
@@ -850,7 +859,7 @@ function rendExt(d,extraData){
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
 
   var porDiaParaGraf=filtroExt&&d.porDiaEq&&d.porDiaEq[filtroExt]?d.porDiaEq[filtroExt]:d.porDia;
-  rendGraficoDiario('gcDiarioExt',porDiaParaGraf,EQCFG[filtroExt]?EQCFG[filtroExt].cor:'#5353E9','GDE');
+  rendGraficoDiario('gcDiarioExt',porDiaParaGraf,EQCFG[filtroExt]?EQCFG[filtroExt].cor:'#5353E9','GDE',MES);
 
   var cve=document.getElementById('gcVelE');
   if(cve)window.GVE=new Chart(cve,{type:'doughnut',data:{datasets:[{data:[Math.min(pctE,100),Math.max(0,100-pctE)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctPE,100),Math.max(0,100-pctPE)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
@@ -927,7 +936,7 @@ function rendInt(d){
     expandCard('Origem de venda',(d.tipos.length===0?'<div style="padding:1rem;color:var(--sub);font-size:13px">⚠️ A coluna "Como conheceu" não existe nessa aba. Adicione-a à planilha para visualizar.</div>':'<div style="overflow-x:auto"><table class="it"><thead><tr><th>Corretor</th>'+tpHd+'<th style="text-align:center;color:#5353E9">Total</th></tr></thead><tbody>'+tpRows+'</tbody><tfoot><tr><td class="fw">Total</td>'+tpFoot+'<td class="fw" style="color:#5353E9">'+tpFootTot+'</td></tr></tfoot></table></div>'),'origem',false)+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
 
-  rendGraficoDiario('gcDiarioInt',d.porDia,'#5353E9','GDI');
+  rendGraficoDiario('gcDiarioInt',d.porDia,'#5353E9','GDI',MES);
 
   var cv=document.getElementById('gcVel');
   if(cv)GV=new Chart(cv,{type:'doughnut',data:{datasets:[{data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctP,100),Math.max(0,100-pctP)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
@@ -1008,7 +1017,7 @@ function rendTotal(d){
     ,'total-cat',true)+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
 
-  rendGraficoDiario('gcDiarioTotal',d.porDia,'#5353E9','GDT');
+  rendGraficoDiario('gcDiarioTotal',d.porDia,'#5353E9','GDT',MES);
   var cvt=document.getElementById('gcVelTotal');
   if(cvt)GVT=new Chart(cvt,{type:'doughnut',data:{datasets:[{data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctP,100),Math.max(0,100-pctP)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
 }
