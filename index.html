@@ -201,11 +201,59 @@ select.mes-sel:hover{background:rgba(255,255,255,.1)}
 // ============================================================
 // CONFIGURAÇÕES
 // ============================================================
-const MESES=['Março/2026','Abril/2026','Maio/2026','Junho/2026','Julho/2026','Agosto/2026','Setembro/2026','Outubro/2026','Novembro/2026','Dezembro/2026'];
-const GIDS={'Março/2026':'99037583'};
-const METAS={'Março/2026':130,'Abril/2026':130,'Maio/2026':130,'Junho/2026':130,'Julho/2026':130,'Agosto/2026':130,'Setembro/2026':130,'Outubro/2026':130,'Novembro/2026':130,'Dezembro/2026':130};
-const METAS_EXT={'Março/2026':300,'Abril/2026':300,'Maio/2026':300,'Junho/2026':300,'Julho/2026':300,'Agosto/2026':300,'Setembro/2026':300,'Outubro/2026':300,'Novembro/2026':300,'Dezembro/2026':300};
-const FERIADOS=['2026-01-01','2026-04-03','2026-04-21','2026-05-01','2026-06-04','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25'];
+
+// ── Gera MESES dinamicamente: de Março/2026 até mês atual + 2 meses à frente ──
+const MESES=(function(){
+  const nomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const inicio={mes:2,ano:2026}; // Março/2026 = index 2
+  const hoje=new Date();
+  const fimMes=hoje.getMonth()+2; // 2 meses à frente
+  const fimAno=hoje.getFullYear()+(fimMes>11?1:0);
+  const fimMesNorm=fimMes%12;
+  const result=[];
+  var a=inicio.ano,m=inicio.mes;
+  while(a<fimAno||(a===fimAno&&m<=fimMesNorm)){
+    result.push(nomes[m]+'/'+a);
+    m++;if(m>11){m=0;a++;}
+  }
+  return result;
+})();
+
+// GIDs das abas — quando definido, usa o GID em vez do nome
+// Para adicionar novo mês: copie o gid= da URL da aba no Sheets
+const GIDS={
+  'Março/2026':'99037583',
+  // 'Abril/2026': '123456789',
+};
+
+// Metas — meses não listados usam o default (130 interno, 300 externo)
+const META_INT_DEFAULT=130;
+const META_EXT_DEFAULT=300;
+const METAS={'Março/2026':130};
+const METAS_EXT={'Março/2026':300};
+function getMetaInt(aba){return METAS[aba]||META_INT_DEFAULT;}
+function getMetaExt(aba){return METAS_EXT[aba]||META_EXT_DEFAULT;}
+
+// ── Feriados nacionais BR — gerados dinamicamente por ano ──
+const FERIADOS_FIXOS=[[1,1],[4,21],[5,1],[9,7],[10,12],[11,2],[11,15],[11,20],[12,25]];
+// Páscoa (Pascoa e Corpus Christi = Páscoa-2, Páscoa+60)
+function calcPascoa(ano){var a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=(h+l-7*m+114)%31+1;return new Date(ano,mes-1,dia);}
+function geraFeriados(anoInicio,anoFim){
+  var f=[];
+  for(var a=anoInicio;a<=anoFim;a++){
+    FERIADOS_FIXOS.forEach(function(fd){f.push(a+'-'+String(fd[0]).padStart(2,'0')+'-'+String(fd[1]).padStart(2,'0'));});
+    var p=calcPascoa(a);
+    // Sexta-feira Santa = Páscoa - 2 dias
+    var sf=new Date(p);sf.setDate(sf.getDate()-2);
+    f.push(sf.getFullYear()+'-'+String(sf.getMonth()+1).padStart(2,'0')+'-'+String(sf.getDate()).padStart(2,'0'));
+    // Corpus Christi = Páscoa + 60 dias
+    var cc=new Date(p);cc.setDate(cc.getDate()+60);
+    f.push(cc.getFullYear()+'-'+String(cc.getMonth()+1).padStart(2,'0')+'-'+String(cc.getDate()).padStart(2,'0'));
+  }
+  return f;
+}
+const FERIADOS=geraFeriados(2026,new Date().getFullYear()+1);
+
 const META_CORRETOR={};
 const KW_INT=['interna','autocello','macro','interno'];
 const KW_EXT={Joao:['joao','joão'],Bernardo:['bernardo'],Renata:['renata'],Agger:['agger']};
@@ -478,7 +526,7 @@ function procExt(rows,aba){
   const eMes=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano);
   let dPass=0,dFalt=0;
   if(mIdx>=0){const todos=diasUtil(ano,mIdx);if(eMes){dPass=todos.filter(d=>d<=hoje).length;dFalt=todos.filter(d=>d>hoje).length;}else if(hoje>new Date(ano,mIdx+1,0)){dPass=todos.length;}else{dFalt=diasUtil(ano,mIdx).length;}}
-  const metaExt=METAS_EXT[aba||MES]||300;
+  const metaExt=getMetaExt(aba||MES);
   const proj=dPass>0?Math.round((tot/dPass)*(dPass+dFalt)):tot;
   const faltMeta=Math.max(0,metaExt-tot);const ritmo=dPass>0?(tot/dPass):0;const vdNec=dFalt>0?(faltMeta/dFalt):0;const dif=vdNec-ritmo;
   const rankExt=Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v);const topConExt=rankExt[0]||null;
@@ -513,7 +561,7 @@ function procInt(rows,aba){
   const mIdx=mNorm.indexOf(n(partes[0]));const ano=parseInt(partes[1])||hoje.getFullYear();
   const eMes=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano);let dPass=0,dFalt=0;
   if(mIdx>=0){const todos=diasUtil(ano,mIdx);if(eMes){dPass=todos.filter(d=>d<=hoje).length;dFalt=todos.filter(d=>d>hoje).length;}else if(hoje>new Date(ano,mIdx+1,0)){dPass=todos.length;}else{dFalt=diasUtil(ano,mIdx).length;}}
-  const proj=dPass>0?Math.round((tot/dPass)*(dPass+dFalt)):tot;const meta=METAS[aba]||130;
+  const proj=dPass>0?Math.round((tot/dPass)*(dPass+dFalt)):tot;const meta=getMetaInt(aba);
   const faltMeta=Math.max(0,meta-tot);const ritmo=dPass>0?(tot/dPass):0;const vdNec=dFalt>0?(faltMeta/dFalt):0;const dif=vdNec-ritmo;
   const topCon=Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v)[0];
   const rank=Object.entries(porCon).sort((a,b)=>b[1].v-a[1].v);
@@ -555,8 +603,8 @@ function rendExt(d){
   var md=['🥇','🥈','🥉'];
   var rR=d.rank.slice(0,35).map(([nm,inf],i)=>{var pos=i+1,pc=pos<=3?'p'+pos:'',c=EQCFG[inf.eq]||{cor:'#444',bg:'#F5F5F5'};return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+nm+'</td><td><span class="bdg" style="background:'+c.bg+';color:'+c.cor+'">'+(EQCFG[inf.eq]?EQCFG[inf.eq].nome:inf.eq)+'</span></td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr" style="color:#7B7B9A;font-size:11px">'+fR(inf.val)+'</td></tr>';}).join('');
   var lg=['Joao','Bernardo','Renata','Agger'].map(k=>'<span class="lgi"><span class="lgsq" style="background:'+EQCFG[k].cor+'"></span>'+EQCFG[k].nome+'</span>').join('');
-  var pctE=Math.min(100,Math.round((d.tot/d.metaExt)*100));
-  var pctPE=Math.min(100,Math.round((d.proj/d.metaExt)*100));
+  var pctE=d.metaExt>0?Math.min(100,Math.round((d.tot/d.metaExt)*100)):0;
+  var pctPE=d.metaExt>0?Math.min(100,Math.round((d.proj/d.metaExt)*100)):0;
   var alrE='';
   if(d.faltMeta===0)alrE='<div class="objalr verd"><span class="objdiff">✅ Meta atingida!</span>Parabéns!</div>';
   else if(d.dif>0)alrE='<div class="objalr verm"><span class="objdiff">⚡ +'+d.dif.toFixed(1)+' vendas/dia</span>Precisa acelerar (ritmo atual: '+d.ritmo.toFixed(1)+'/dia)</div>';
@@ -684,8 +732,8 @@ function rendPainelCad(cad){
 function rendInt(d){
   var topN=d.topCon?d.topCon[0]:'—';
   var topI=d.topCon?d.topCon[1]:{v:0,val:0};
-  var pct=Math.min(100,Math.round((d.tot/d.meta)*100));
-  var pctP=Math.min(100,Math.round((d.proj/d.meta)*100));
+  var pct=d.meta>0?Math.min(100,Math.round((d.tot/d.meta)*100)):0;
+  var pctP=d.meta>0?Math.min(100,Math.round((d.proj/d.meta)*100)):0;
   var md=['🥇','🥈','🥉'];
 
   var alr='';
@@ -754,8 +802,8 @@ function rendInt(d){
 // ============================================================
 // CONTROLE
 // ============================================================
-function setView(v){VIEW=v;document.getElementById('btn-ext').classList.toggle('on',v==='ext');document.getElementById('btn-int').classList.toggle('on',v==='int');atualizar();}
-function trocarMes(v){MES=v;atualizar();}
+function setView(v){VIEW=v;filtroInt=null;filtroExt=null;document.getElementById('btn-ext').classList.toggle('on',v==='ext');document.getElementById('btn-int').classList.toggle('on',v==='int');atualizar();}
+function trocarMes(v){MES=v;filtroInt=null;filtroExt=null;mesAntData=null;atualizar();}
 function popularSel(){var s=document.getElementById('mes-sel');s.innerHTML='';MESES.forEach(function(m){var o=document.createElement('option');o.value=m;o.textContent=m;if(m===MES)o.selected=true;s.appendChild(o);});}
 
 async function atualizar(){
