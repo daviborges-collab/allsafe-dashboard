@@ -212,17 +212,31 @@ async function detectarMeses(){
 }
 
 var META_INT_DEFAULT=130, META_EXT_DEFAULT=300;
-var METAS={'Março/2026':130};
-var METAS_EXT={'Março/2026':300};
-function getMetaInt(aba){return METAS[aba]||META_INT_DEFAULT;}
-function getMetaExt(aba){return METAS_EXT[aba]||META_EXT_DEFAULT;}
+var SHEET_META='1X5TmmMx3J-g321tcVkjubjIkxxYjPNQRk5q-wHRTniE';
+var METAS_INT_DATA=null; // {corretores:{nome:valor}, total:N, mes:''}
+var METAS_EXT_DATA=null; // {equipes:{nome:valor}, total:N, mes:''}
+
+function getMetaInt(aba){
+  if(METAS_INT_DATA&&METAS_INT_DATA.meses){
+    var mesKey=findMetaMes(aba,METAS_INT_DATA.meses);
+    if(mesKey!==null&&METAS_INT_DATA.totais[mesKey]!==undefined)return METAS_INT_DATA.totais[mesKey];
+  }
+  return META_INT_DEFAULT;
+}
+function getMetaExt(aba){
+  if(METAS_EXT_DATA&&METAS_EXT_DATA.meses){
+    var mesKey=findMetaMes(aba,METAS_EXT_DATA.meses);
+    if(mesKey!==null&&METAS_EXT_DATA.totais[mesKey]!==undefined)return METAS_EXT_DATA.totais[mesKey];
+  }
+  return META_EXT_DEFAULT;
+}
 
 var FERIADOS_FIXOS=[[1,1],[4,21],[5,1],[9,7],[10,12],[11,2],[11,15],[11,20],[12,25]];
 function calcPascoa(ano){var a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=(h+l-7*m+114)%31+1;return new Date(ano,mes-1,dia);}
 function geraFeriados(a0,a1){var f=[];for(var a=a0;a<=a1;a++){FERIADOS_FIXOS.forEach(function(fd){f.push(a+'-'+String(fd[0]).padStart(2,'0')+'-'+String(fd[1]).padStart(2,'0'));});var p=calcPascoa(a);var sf=new Date(p);sf.setDate(sf.getDate()-2);f.push(sf.getFullYear()+'-'+String(sf.getMonth()+1).padStart(2,'0')+'-'+String(sf.getDate()).padStart(2,'0'));var cc=new Date(p);cc.setDate(cc.getDate()+60);f.push(cc.getFullYear()+'-'+String(cc.getMonth()+1).padStart(2,'0')+'-'+String(cc.getDate()).padStart(2,'0'));}return f;}
 var FERIADOS=geraFeriados(2026,new Date().getFullYear()+1);
 
-var META_CORRETOR={};
+var META_CORRETOR={}; // populated by fetchMetas
 var KW_INT=['interna','autocello','macro','interno'];
 var KW_EXT={Joao:['joao','joão'],Bernardo:['bernardo'],Renata:['renata'],Agger:['agger']};
 var EQCFG={Joao:{nome:'João',cor:'#3535C0',bg:'#EEEEFF'},Bernardo:{nome:'Bernardo',cor:'#0A6B54',bg:'#E0FDF6'},Renata:{nome:'Renata',cor:'#8B1A90',bg:'#FDE8FD'},Agger:{nome:'Agger',cor:'#5C6200',bg:'#F6FBDA'}};
@@ -544,8 +558,146 @@ function rendVelocimetro(canvasId,pct,pctP,chartKey){
   registerChart(chartKey,new Chart(cv,{type:'doughnut',data:{datasets:[{data:[Math.min(pct,100),Math.max(0,100-pct)],backgroundColor:['#5353E9','#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[Math.min(pctP,100),Math.max(0,100-pctP)],backgroundColor:['rgba(83,83,233,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}}));
 }
 
-async function fetchMetas(){dadosMetas=null;}
-function getMetaCorretor(nome){return META_CORRETOR[nome]||0;}
+// Encontra o índice de coluna que corresponde ao mês selecionado
+function findMetaMes(aba,meses){
+  var nAba=n(aba);
+  for(var i=0;i<meses.length;i++){
+    if(n(meses[i])===nAba)return i;
+    // Parcial: "março/2026" match "marco/2026"
+    var nM=n(meses[i]);
+    if(nAba.split('/')[0]===nM.split('/')[0]&&nAba.split('/')[1]===nM.split('/')[1])return i;
+  }
+  return null;
+}
+
+async function fetchMetas(){
+  try{
+    // ── INTERNO ──
+    var urlInt='https://docs.google.com/spreadsheets/d/'+SHEET_META+'/export?format=csv&gid=0';
+    var rInt=await fetch(urlInt);
+    if(rInt.ok){
+      var txtInt=await rInt.text();
+      var linhasInt=txtInt.split('\n').filter(function(l){return l.trim();});
+      if(linhasInt.length>=2){
+        var headerInt=parseCSVLine(linhasInt[0]);
+        // Meses são colunas a partir de B (index 1)
+        var mesesInt=headerInt.slice(1).filter(function(m){return m.trim();});
+        var corretores={};
+        var totais=[];
+        var metaTotalRow=null;
+        for(var i=1;i<linhasInt.length;i++){
+          var cols=parseCSVLine(linhasInt[i]);
+          var nome=(cols[0]||'').trim();
+          if(!nome)continue;
+          var nNome=n(nome);
+          // Detecta linha de "meta total"
+          if(nNome.includes('meta total')||nNome.includes('metal total')){
+            metaTotalRow=cols;
+            continue;
+          }
+          // Cada coluna B,C,D... tem o valor de meta do corretor para aquele mês
+          var metasPorMes=[];
+          for(var j=1;j<cols.length;j++){
+            metasPorMes.push(parseInt(cols[j])||0);
+          }
+          corretores[nome]=metasPorMes;
+        }
+        // Totais por mês
+        if(metaTotalRow){
+          for(var j=1;j<metaTotalRow.length;j++){
+            totais.push(parseInt(metaTotalRow[j])||0);
+          }
+        }else{
+          // Calcula totais somando
+          for(var mi=0;mi<mesesInt.length;mi++){
+            var soma=0;
+            for(var cn in corretores){if(corretores.hasOwnProperty(cn))soma+=(corretores[cn][mi]||0);}
+            totais.push(soma);
+          }
+        }
+        METAS_INT_DATA={meses:mesesInt,corretores:corretores,totais:totais};
+        
+        // Popula META_CORRETOR para o mês atual
+        var mesIdx=findMetaMes(MES,mesesInt);
+        if(mesIdx!==null){
+          META_CORRETOR={};
+          for(var cn in corretores){
+            if(corretores.hasOwnProperty(cn)){
+              META_CORRETOR[cn]=corretores[cn][mesIdx]||0;
+            }
+          }
+        }
+      }
+    }
+    
+    // ── EXTERNO ──
+    var urlExt='https://docs.google.com/spreadsheets/d/'+SHEET_META+'/export?format=csv&gid=228088346';
+    var rExt=await fetch(urlExt);
+    if(rExt.ok){
+      var txtExt=await rExt.text();
+      var linhasExt=txtExt.split('\n').filter(function(l){return l.trim();});
+      if(linhasExt.length>=2){
+        var headerExt=parseCSVLine(linhasExt[0]);
+        var mesesExt=headerExt.slice(1).filter(function(m){return m.trim();});
+        var equipes={};
+        var totaisExt=[];
+        var metaTotalRowExt=null;
+        for(var i=1;i<linhasExt.length;i++){
+          var cols=parseCSVLine(linhasExt[i]);
+          var nome=(cols[0]||'').trim();
+          if(!nome)continue;
+          var nNome=n(nome);
+          if(nNome.includes('meta total')||nNome.includes('metal total')){
+            metaTotalRowExt=cols;continue;
+          }
+          var metasPorMes=[];
+          for(var j=1;j<cols.length;j++){metasPorMes.push(parseInt(cols[j])||0);}
+          equipes[nome]=metasPorMes;
+        }
+        if(metaTotalRowExt){
+          for(var j=1;j<metaTotalRowExt.length;j++){totaisExt.push(parseInt(metaTotalRowExt[j])||0);}
+        }else{
+          for(var mi=0;mi<mesesExt.length;mi++){var soma=0;for(var en in equipes){if(equipes.hasOwnProperty(en))soma+=(equipes[en][mi]||0);}totaisExt.push(soma);}
+        }
+        METAS_EXT_DATA={meses:mesesExt,equipes:equipes,totais:totaisExt};
+      }
+    }
+    dadosMetas={interno:METAS_INT_DATA,externo:METAS_EXT_DATA};
+  }catch(e){
+    console.warn('fetchMetas erro:',e);
+    dadosMetas=null;
+  }
+}
+
+function getMetaCorretor(nome){
+  // Tenta match exato primeiro, depois parcial
+  if(META_CORRETOR[nome])return META_CORRETOR[nome];
+  var nNome=n(nome);
+  for(var k in META_CORRETOR){
+    if(META_CORRETOR.hasOwnProperty(k)&&n(k)===nNome)return META_CORRETOR[k];
+  }
+  return 0;
+}
+
+function getMetaEquipe(nomeEquipe){
+  if(!METAS_EXT_DATA||!METAS_EXT_DATA.meses)return 0;
+  var mesIdx=findMetaMes(MES,METAS_EXT_DATA.meses);
+  if(mesIdx===null)return 0;
+  var nNome=n(nomeEquipe);
+  for(var k in METAS_EXT_DATA.equipes){
+    if(METAS_EXT_DATA.equipes.hasOwnProperty(k)&&n(k)===nNome){
+      return METAS_EXT_DATA.equipes[k][mesIdx]||0;
+    }
+  }
+  // Parcial
+  for(var k in METAS_EXT_DATA.equipes){
+    if(METAS_EXT_DATA.equipes.hasOwnProperty(k)){
+      var nK=n(k);
+      if(nK.includes(nNome)||nNome.includes(nK))return METAS_EXT_DATA.equipes[k][mesIdx]||0;
+    }
+  }
+  return 0;
+}
 
 async function fetchMesAnterior(){
   var idx=MESES.indexOf(MES);if(idx<=0)return null;
@@ -625,7 +777,7 @@ function procInt(rows,aba){
   var proj=dias.dPass>0?Math.round((tot/dias.dPass)*(dias.dPass+dias.dFalt)):tot;
   var faltMeta=Math.max(0,meta-tot);var ritmo=dias.dPass>0?(tot/dias.dPass):0;var vdNec=dias.dFalt>0?(faltMeta/dias.dFalt):0;
   var rank=Object.entries(porCon).sort(function(a,b){return b[1].v-a[1].v;});
-  rank.forEach(function(entry){var inf=entry[1];inf.tend=dias.dPass>0?Math.round((inf.v/dias.dPass)*(dias.dPass+dias.dFalt)):inf.v;inf.metaI=META_CORRETOR[entry[0]]||0;inf.faltI=inf.metaI>0?Math.max(0,inf.metaI-inf.v):null;});
+  rank.forEach(function(entry){var inf=entry[1];inf.tend=dias.dPass>0?Math.round((inf.v/dias.dPass)*(dias.dPass+dias.dFalt)):inf.v;inf.metaI=getMetaCorretor(entry[0]);inf.faltI=inf.metaI>0?Math.max(0,inf.metaI-inf.v):null;});
   var tiposSet=new Set();vFilt.forEach(function(r){tiposSet.add(r.tipoNeg||'Não informado');});
   var todosNaoInfo=[...tiposSet].every(function(t){return t==='Não informado';});
   var tipos=todosNaoInfo?[]:([...tiposSet].filter(function(t){return t&&t!=='Não informado';}).sort());
@@ -682,7 +834,7 @@ function rendExt(d){
   destroyAllCharts(); // CORREÇÃO: destruir charts ANTES de substituir DOM
   var ests=Object.entries(d.porEst).sort(function(a,b){return b[1]-a[1];}).slice(0,12).map(function(e){return e[0];});
   var hojeEq=function(k){return d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';};
-  var eqC=['Joao','Bernardo','Renata','Agger'].map(function(k){var cfg=EQCFG[k],s=d.porEq[k];var faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'"><span class="eqdot" style="background:'+cfg.cor+'"></span><span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span><div style="text-align:right"><div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div><div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div></div></div>';}).join('');
+  var eqC=['Joao','Bernardo','Renata','Agger'].map(function(k){var cfg=EQCFG[k],s=d.porEq[k];var faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';var mEq=getMetaEquipe(cfg.nome);var faltEq=mEq>0?Math.max(0,mEq-s.v):null;return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'"><span class="eqdot" style="background:'+cfg.cor+'"></span><span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span><div style="text-align:right"><div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div>'+(mEq>0?'<div style="font-size:9px;color:'+cfg.cor+';opacity:.7">Meta '+mEq+(faltEq>0?' · faltam '+faltEq:' ✅')+'</div>':'')+'<div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div></div></div>';}).join('');
   var aP=d.agEst.length?d.agEst.map(function(e){return '<div class="agpill"><b>'+e[1]+'</b>'+e[0]+'</div>';}).join(''):'<span style="font-size:11px;opacity:.5">Sem dados</span>';
   var md=['🥇','🥈','🥉'];
   var rR=d.rank.slice(0,35).map(function(entry,i){var nm=entry[0],inf=entry[1];var pos=i+1,pc=pos<=3?'p'+pos:'',c=EQCFG[inf.eq]||{cor:'#444',bg:'#F5F5F5'};return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+nm+'</td><td><span class="bdg" style="background:'+c.bg+';color:'+c.cor+'">'+(EQCFG[inf.eq]?EQCFG[inf.eq].nome:inf.eq)+'</span></td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr" style="color:#7B7B9A;font-size:11px">'+fR(inf.val)+'</td></tr>';}).join('');
@@ -728,7 +880,7 @@ function rendBaseCorretor(data){var el=document.getElementById('painel-base');if
 
 function rendNovosCorretores(data){var el=document.getElementById('painel-novos');if(!el)return;var hoje=new Date();var titMes=NOMES_MES[hoje.getMonth()]+'/'+hoje.getFullYear();var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Outro':{cor:'#555',bg:'#F5F5F5'}};if(!data.novos.length){el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhuma 1ª venda neste mês.</div>','novos',false);return;}var rows=data.novos.map(function(c,i){var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td><td class="fw">'+c.nome+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td style="font-size:11px;color:var(--sub)">'+c.equipe+'</td><td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td></tr>';}).join('');el.innerHTML=expandCard('🆕 1ª venda em '+titMes+' ('+data.total+')','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th>Time</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);}
 
-function rendCorretoresEstado(data){var el=document.getElementById('painel-estado');if(!el)return;function pillsHtml(lista,cor){return lista.map(function(e){return '<div style="display:inline-flex;align-items:center;gap:5px;background:'+cor+'22;border:1px solid '+cor+'55;border-radius:20px;padding:3px 10px;font-size:12px;color:'+cor+'"><b style="color:#fff">'+e[1]+'</b>'+e[0]+'</div>';}).join('');}el.innerHTML='<div class="sectit">Corretores por estado — João · Renata · Bernardo</div><div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+data.totalJRB+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.jrb,'#5353E9')+'</div></div><div class="sectit">Corretores por estado — Agger</div><div style="background:var(--dark);border-radius:14px;padding:1.25rem;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><span style="font-size:11px;color:#6060A0">Total: <b style="color:var(--limao)">'+data.totalAgger+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.agger,'#AFF9E4')+'</div></div>';}
+function rendCorretoresEstado(data){var el=document.getElementById('painel-estado');if(!el)return;function pillsHtml(lista,cor,numCor){return lista.map(function(e){return '<div style="display:inline-flex;align-items:center;gap:5px;background:'+cor+'22;border:1px solid '+cor+'55;border-radius:20px;padding:3px 10px;font-size:12px;color:'+cor+'"><b style="color:'+numCor+';font-size:13px">'+e[1]+'</b>'+e[0]+'</div>';}).join('');}el.innerHTML='<div class="sectit">Corretores por estado — João · Renata · Bernardo</div><div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+data.totalJRB+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.jrb,'#5353E9','#000000')+'</div></div><div class="sectit">Corretores por estado — Agger</div><div style="background:var(--dark);border-radius:14px;padding:1.25rem;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><span style="font-size:11px;color:#6060A0">Total: <b style="color:var(--limao)">'+data.totalAgger+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.agger,'#AFF9E4','#fff')+'</div></div>';}
 
 function rendPainelCad(cad){var painel=document.getElementById('painel-cad');if(!painel)return;var EQ=[{k:'Joao',nome:'João',cor:'#3535C0',bg:'#EEEEFF'},{k:'Bernardo',nome:'Bernardo',cor:'#0A6B54',bg:'#E0FDF6'},{k:'Renata',nome:'Renata',cor:'#8B1A90',bg:'#FDE8FD'},{k:'Agger',nome:'Agger',cor:'#5C6200',bg:'#F6FBDA'}];var cards=EQ.map(function(e){var qtd=cad.porEq[e.k]||0;var pct=cad.total>0?Math.round((qtd/cad.total)*100):0;return '<div style="background:'+e.bg+';border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:'+e.cor+'"></span><span style="font-size:13px;font-weight:600;color:'+e.cor+';flex:1">'+e.nome+'</span><div style="text-align:right"><div style="font-size:22px;font-weight:800;color:'+e.cor+'">'+qtd+'</div><div style="font-size:10px;color:'+e.cor+';opacity:.7">'+pct+'%</div></div></div>';}).join('');painel.innerHTML='<div class="sectit">Corretores cadastrados por equipe</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px">'+cards+'</div><div style="font-size:11px;color:var(--sub);text-align:right;margin-bottom:20px">Total: <b style="color:var(--dark)">'+cad.total+'</b> corretores ativos</div>';}
 
@@ -814,11 +966,13 @@ function trocarMes(v){MES=v;filtroInt=null;filtroExt=null;mesAntData=null;atuali
 function popularSel(){var s=document.getElementById('mes-sel');s.innerHTML='';MESES.forEach(function(m){var o=document.createElement('option');o.value=m;o.textContent=m;if(m===MES)o.selected=true;s.appendChild(o);});}
 
 async function atualizar(){
-  var thisVersion=++_renderVersion; // CORREÇÃO: versão para prevenir callbacks obsoletos
+  var thisVersion=++_renderVersion;
   try{
     document.getElementById('ts').textContent='Atualizando...';
+    // Busca metas sempre (recalcula META_CORRETOR para o mês selecionado)
+    await fetchMetas().catch(function(){});
     var rows=await fetchRows(MES);
-    if(thisVersion!==_renderVersion)return; // Usuário trocou de mês/view enquanto carregava
+    if(thisVersion!==_renderVersion)return;
 
     if(VIEW==='ext'){
       var dExt=procExt(rows,MES);
