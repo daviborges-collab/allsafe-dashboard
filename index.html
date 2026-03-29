@@ -277,7 +277,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.0 — Visual Refinement */
+/*! Allsafe Dashboard v3.1 — Bug Fixes Applied (FIX 1-4) */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -820,6 +820,24 @@ function calcDias(aba){
   return{dPass:dPass,dFalt:dFalt,mesEncerrado:dFalt===0&&dPass>0};
 }
 
+/* FIX 2: Helper para parsear datas em múltiplos formatos */
+function parseDataField(dataStr){
+  if(!dataStr)return{dStr:'',dia:null};
+  var s=dataStr.trim();
+  // Tenta DD/MM/YYYY ou DD/MM/YYYY HH:MM:SS
+  var pts=s.split('/');
+  if(pts.length>=3){
+    var dayPart=pts[0].trim().padStart(2,'0');
+    var monthPart=pts[1].trim().padStart(2,'0');
+    var yearPart=pts[2].trim().split(/\s/)[0]; // remove time portion
+    return{dStr:yearPart+'-'+monthPart+'-'+dayPart,dia:dayPart+'/'+monthPart};
+  }
+  // Tenta ISO: YYYY-MM-DD ou YYYY-MM-DDTHH:MM:SS
+  var iso=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso){return{dStr:iso[1]+'-'+iso[2]+'-'+iso[3],dia:iso[3]+'/'+iso[2]};}
+  return{dStr:'',dia:null};
+}
+
 function procExt(rows,aba){
   var hoje=new Date();var hojeStr=hojeLocal();
   var v=rows.filter(function(r){return STATUS_OK.includes(n(r.status))&&!ehInt(r.equipe);});
@@ -831,8 +849,8 @@ function procExt(rows,aba){
   var porEst={},porEstEq={},porCon={};
   vFilt.forEach(function(r){
     var eqK=detExt(r.equipe),con=r.consultor;
-    var dStr='';var dia=r.data?r.data.slice(0,5):null;
-    if(r.data){var pts=r.data.split('/');if(pts.length===3)dStr=pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');}
+    /* FIX 2: Usar parseDataField em vez de parse manual */
+    var parsed=parseDataField(r.data);var dStr=parsed.dStr;var dia=parsed.dia;
     if(dStr===hojeStr){vendHoje++;if(eqK&&vendHojeEq[eqK]!==undefined)vendHojeEq[eqK]++;}
     if(dia){porDia[dia]=(porDia[dia]||0)+1;if(eqK){if(!porDiaEq[eqK])porDiaEq[eqK]={};porDiaEq[eqK][dia]=(porDiaEq[eqK][dia]||0)+1;}}
     tot++;totV+=r.valor;
@@ -841,9 +859,12 @@ function procExt(rows,aba){
     if(eqK&&con){if(!porCon[con])porCon[con]={v:0,val:0,eq:eqK};porCon[con].v++;porCon[con].val+=r.valor;}
   });
   var agEst=Object.entries(porEstEq).map(function(e){return[e[0],(e[1]['Agger']||0)];}).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];});
-  var dias=calcDias(aba);var metaExt=getMetaExt(aba);
+  /* FIX 3: Usar meta da equipe filtrada quando filtro ativo */
+  var dias=calcDias(aba);var metaExt=filtroExt?getMetaEquipe(EQCFG[filtroExt].nome):getMetaExt(aba);
   var proj=dias.dPass>0?Math.round((tot/dias.dPass)*(dias.dPass+dias.dFalt)):tot;
   var faltMeta=Math.max(0,metaExt-tot);var ritmo=dias.dPass>0?(tot/dias.dPass):0;var vdNec=dias.dFalt>0?(faltMeta/dias.dFalt):0;
+  /* FIX 1: Proteção contra Infinity */
+  if(!isFinite(proj))proj=tot;if(!isFinite(ritmo))ritmo=0;if(!isFinite(vdNec))vdNec=0;
   var rankExt=Object.entries(porCon).sort(function(a,b){return b[1].v-a[1].v;});
   return{tot:tot,totV:totV,ticket:tot?totV/tot:0,porEq:porEq,porEst:porEst,porEstEq:porEstEq,agEst:agEst,rank:rankExt,topConExt:rankExt[0]||null,vendHoje:vendHoje,vendHojeEq:vendHojeEq,porDia:porDia,porDiaEq:porDiaEq,proj:proj,dPass:dias.dPass,dFalt:dias.dFalt,metaExt:metaExt,faltMeta:faltMeta,ritmo:ritmo,vdNec:vdNec,dif:vdNec-ritmo,porCon:porCon,mesEncerrado:dias.mesEncerrado};
 }
@@ -858,8 +879,8 @@ function procInt(rows,aba){
   var tot=0,totV=0,vendHoje=0;var porCon={};var porCorCat={};var porCorTipo={};var porDia={};
   vFilt.forEach(function(r){
     var con=r.consultor||'';if(!con)return;
-    var dStr='';var dia=r.data?r.data.slice(0,5):null;
-    if(r.data){var pts=r.data.split('/');if(pts.length===3)dStr=pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');}
+    /* FIX 2: Usar parseDataField em vez de parse manual */
+    var parsed=parseDataField(r.data);var dStr=parsed.dStr;var dia=parsed.dia;
     if(dStr===hojeStr)vendHoje++;if(dia)porDia[dia]=(porDia[dia]||0)+1;
     tot++;totV+=r.valor;
     if(!porCon[con])porCon[con]={v:0,val:0};porCon[con].v++;porCon[con].val+=r.valor;
@@ -870,8 +891,13 @@ function procInt(rows,aba){
   var dias=calcDias(aba);var meta=getMetaInt(aba);
   var proj=dias.dPass>0?Math.round((tot/dias.dPass)*(dias.dPass+dias.dFalt)):tot;
   var faltMeta=Math.max(0,meta-tot);var ritmo=dias.dPass>0?(tot/dias.dPass):0;var vdNec=dias.dFalt>0?(faltMeta/dias.dFalt):0;
+  /* FIX 1: Proteção contra Infinity */
+  if(!isFinite(proj))proj=tot;if(!isFinite(ritmo))ritmo=0;if(!isFinite(vdNec))vdNec=0;
   var rank=Object.entries(porCon).sort(function(a,b){return b[1].v-a[1].v;});
-  rank.forEach(function(entry){var inf=entry[1];inf.tend=dias.dPass>0?Math.round((inf.v/dias.dPass)*(dias.dPass+dias.dFalt)):inf.v;inf.metaI=getMetaCorretor(entry[0]);inf.faltI=inf.metaI>0?Math.max(0,inf.metaI-inf.v):null;});
+  rank.forEach(function(entry){var inf=entry[1];
+    /* FIX 1: Proteção contra Infinity na tendência */
+    var rawTend=dias.dPass>0?Math.round((inf.v/dias.dPass)*(dias.dPass+dias.dFalt)):inf.v;inf.tend=isFinite(rawTend)?rawTend:inf.v;
+    inf.metaI=getMetaCorretor(entry[0]);inf.faltI=inf.metaI>0?Math.max(0,inf.metaI-inf.v):null;});
   var tiposSet=new Set();vFilt.forEach(function(r){tiposSet.add(r.tipoNeg||'Não informado');});
   var todosNaoInfo=[...tiposSet].every(function(t){return t==='Não informado';});
   var tipos=todosNaoInfo?[]:([...tiposSet].filter(function(t){return t&&t!=='Não informado';}).sort());
@@ -887,8 +913,8 @@ function procTotal(rows,aba){
   var tot=0,totV=0,vendHoje=0;var porDia={};var porCat={};var porTipo={};
   var extV=0,extVal=0,intV=0,intVal=0;
   v.forEach(function(r){
-    var dStr='';var dia=r.data?r.data.slice(0,5):null;
-    if(r.data){var pts=r.data.split('/');if(pts.length===3)dStr=pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');}
+    /* FIX 2: Usar parseDataField em vez de parse manual */
+    var parsed=parseDataField(r.data);var dStr=parsed.dStr;var dia=parsed.dia;
     if(dStr===hojeStr)vendHoje++;if(dia)porDia[dia]=(porDia[dia]||0)+1;
     tot++;totV+=r.valor;
     if(ehInt(r.equipe)){intV++;intVal+=r.valor;}else{extV++;extVal+=r.valor;}
@@ -899,6 +925,8 @@ function procTotal(rows,aba){
   var dias=calcDias(aba);var metaTotal=getMetaInt(aba)+getMetaExt(aba);
   var proj=dias.dPass>0?Math.round((tot/dias.dPass)*(dias.dPass+dias.dFalt)):tot;
   var faltMeta=Math.max(0,metaTotal-tot);var ritmo=dias.dPass>0?(tot/dias.dPass):0;var vdNec=dias.dFalt>0?(faltMeta/dias.dFalt):0;
+  /* FIX 1: Proteção contra Infinity */
+  if(!isFinite(proj))proj=tot;if(!isFinite(ritmo))ritmo=0;if(!isFinite(vdNec))vdNec=0;
   var tiposArr=Object.keys(porTipo).filter(function(t){return t!=='Não informado';}).sort();
   if(porTipo['Não informado'])tiposArr.push('Não informado');
   var todosNaoInfo=tiposArr.length===1&&tiposArr[0]==='Não informado';
@@ -986,8 +1014,11 @@ function rendInt(d){
   var tpRows=d.tipos.length?d.rank.map(function(entry){var nm=entry[0];var cells=d.tipos.map(function(t){return '<td>'+(d.porCorTipo[nm]&&d.porCorTipo[nm][t]?d.porCorTipo[nm][t]:'-')+'</td>';}).join('');var rowTot=d.tipos.reduce(function(s,t){return s+((d.porCorTipo[nm]||{})[t]||0);},0);return '<tr><td class="fw">'+nm+'</td>'+cells+'<td class="fw" style="color:#5353E9">'+rowTot+'</td></tr>';}).join(''):'';
   var tpFoot=d.tipos.length?d.tipos.map(function(t){var s=d.rank.reduce(function(acc,e){return acc+((d.porCorTipo[e[0]]||{})[t]||0);},0);return '<td>'+s+'</td>';}).join(''):'';
   var tpFootTot=d.rank.reduce(function(s,e){return s+d.tipos.reduce(function(ss,t){return ss+((d.porCorTipo[e[0]]||{})[t]||0);},0);},0);
+  /* FIX 4: Usar data-cor e this.dataset.cor para segurança */
   var corBtns='<div class="filtro-cor-bar"><button class="filtro-cor-btn'+(filtroInt===null?' on':'')+'" onclick="setFiltroInt(null)">Todos</button>';
-  d.allRank.forEach(function(entry){var nm=entry[0];var on=filtroInt===nm;var safeNm=nm.replace(/'/g,"\\'");corBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" onclick="setFiltroInt(\''+safeNm+'\')">'+nm.split(' ')[0]+'</button>';});
+  d.allRank.forEach(function(entry){var nm=entry[0];var on=filtroInt===nm;
+    corBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" data-cor="'+nm.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" onclick="setFiltroInt(this.dataset.cor)">'+nm.split(' ')[0]+'</button>';
+  });
   corBtns+='</div>';
 
   document.getElementById('root').innerHTML=
