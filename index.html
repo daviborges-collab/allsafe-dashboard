@@ -410,7 +410,6 @@ var SHEET_CAD=atob('MThOOHhZYU5FWW9keFVjSlNLMzNlbjM4VXpXUDd5N2xNVkphSDUwclNGRVk=
 var GID_SCRIPT='2117768339';
 var GID_BASE='728914571';
 var EXCLUIR_REGIONAL=['totalben associacao de beneficios','sindicato- rio de janeiro - taxistas','stamrj','macro','matriz | rio de janeiro -rj','migracao - sindicato','regional - robocop- sindicato','dinami club','autocelo'];
-var EXCLUIR_TIPO_NEG=['Substituição','Troca de Titularidade'];
 var STATUS_OK=['ativo','pendente de analise','autorizado'];
 var VIEW='ext',MES='';
 var filtroExt=null,filtroInt=null;
@@ -499,8 +498,6 @@ function parseCSV(txt){
     if(c.length<3)continue;
     var status=(c[COL.status]||'').trim();
     if(!status)continue;
-    var _tipoNeg:_tipoNeg,
-    if(EXCLUIR_TIPO_NEG.some(function(ex){return n(_tipoNeg)===n(ex);}))continue;
     rows.push({
       status:status,
       equipe:(c[COL.equipe]||'').trim(),
