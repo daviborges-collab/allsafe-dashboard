@@ -277,7 +277,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.2 — Bug Fixes Applied (FIX 1-7) */
+/*! Allsafe Dashboard v3.3 — Bug Fixes Applied (FIX 1-7, 10) */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -309,6 +309,9 @@ function fetchCachedCSV(url){
   }).then(function(txt){
     _csvCache[url]=Promise.resolve(txt);
     return txt;
+  }).catch(function(err){
+    delete _csvCache[url]; /* FIX 10: libera cache em erro para permitir retry */
+    throw err;
   });
   _csvCache[url]=p;
   return p;
