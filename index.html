@@ -277,7 +277,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.1 — Bug Fixes Applied (FIX 1-4) */
+/*! Allsafe Dashboard v3.2 — Bug Fixes Applied (FIX 1-7) */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -296,6 +296,23 @@ var _intervaloAtualizar = null;
 var NOMES_MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MESES=[];
 var _renderVersion=0;
+
+/* FIX 7: Cache de fetch por ciclo de render — evita chamadas redundantes */
+var _csvCache={};
+var _csvCacheVersion=-1;
+function fetchCachedCSV(url){
+  if(_csvCacheVersion!==_renderVersion){_csvCache={};_csvCacheVersion=_renderVersion;}
+  if(_csvCache[url])return _csvCache[url];
+  var p=fetchComTimeout(url,15000).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.text();
+  }).then(function(txt){
+    _csvCache[url]=Promise.resolve(txt);
+    return txt;
+  });
+  _csvCache[url]=p;
+  return p;
+}
 
 function gerarCandidatosMeses(){
   var hoje=new Date();
@@ -381,7 +398,7 @@ function pv(v){if(!v)return 0;return parseFloat(String(v).replace(/R\$\s?/g,'').
 function fR(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fN(v){return Math.round(v).toLocaleString('pt-BR');}
 function ehInt(e){var l=n(e);return KW_INT.some(function(k){return l.includes(k);});}
-function detExt(e){var l=n(e);for(var k of Object.keys(KW_EXT)){if(KW_EXT[k].some(function(kw){return l.includes(kw);}))return k;}return null;}
+function detExt(e){var l=n(e);var _ks=Object.keys(KW_EXT);for(var _i=0;_i<_ks.length;_i++){var k=_ks[_i];if(KW_EXT[k].some(function(kw){return l.includes(kw);}))return k;}return null;}
 function ehUtil(d){var dw=d.getDay();if(dw===0||dw===6)return false;var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return!FERIADOS.includes(ds);}
 function diasUtil(ano,mes){var r=[],d=new Date(ano,mes,1);while(d.getMonth()===mes){if(ehUtil(new Date(d)))r.push(new Date(d));d.setDate(d.getDate()+1);}return r;}
 function nomeMes(){return NOMES_MES[new Date().getMonth()]+'/'+new Date().getFullYear();}
@@ -491,8 +508,7 @@ async function fetchRows(aba){
 async function fetchCadastros(){
   try{
     var url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442';
-    var r=await fetchComTimeout(url, 15000);if(!r.ok)return null;
-    var txt=await r.text();if(!txt||!txt.includes(','))return null;
+    var txt=await fetchCachedCSV(url);if(!txt||!txt.includes(','))return null;
     var linhas=txt.split('\n');if(linhas.length<2)return null;
     var headers=parseCSVLine(linhas[0]);
     var hIdx={};headers.forEach(function(h,i){hIdx[n(h)]=i;});
@@ -517,8 +533,7 @@ async function fetchCadastros(){
 async function fetchScriptManual(){
   try{
     var url='https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid='+GID_SCRIPT;
-    var r=await fetchComTimeout(url, 15000);if(!r.ok)return null;
-    var txt=await r.text();if(!txt||!txt.includes(','))return null;
+    var txt=await fetchCachedCSV(url);if(!txt||!txt.includes(','))return null;
     var linhas=txt.split('\n');if(linhas.length<2)return null;
     var headers=parseCSVLine(linhas[0]);
     var hIdx={};headers.forEach(function(h,i){hIdx[n(h)]=i;});
@@ -544,8 +559,7 @@ async function fetchScriptManual(){
 async function fetchBaseCorretor(){
   try{
     var url='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE;
-    var r=await fetchComTimeout(url, 15000);if(!r.ok)return null;
-    var txt=await r.text();if(!txt||!txt.includes(','))return null;
+    var txt=await fetchCachedCSV(url);if(!txt||!txt.includes(','))return null;
     var linhas=txt.split('\n');if(linhas.length<2)return null;
     var headers=parseCSVLine(linhas[0]);
     var hIdx={};headers.forEach(function(h,i){hIdx[n(h)]=i;});
@@ -568,9 +582,8 @@ async function fetchBaseCorretor(){
     }
     var mapaTime={};
     try{
-      var rCad=await fetchComTimeout('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442', 15000);
-      if(rCad.ok){
-        var txtCad=await rCad.text();
+      var txtCad=await fetchCachedCSV('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
+      if(txtCad){
         var cadLinhas=txtCad.split('\n');
         if(cadLinhas.length>=2){
           var cadHeaders=parseCSVLine(cadLinhas[0]);
@@ -605,10 +618,9 @@ async function fetchNovosCorretores(){
   try{
     var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
     var partes=MES.split('/');var mesAtual=mN.indexOf(n(partes[0]));var anoAtual=parseInt(partes[1])||new Date().getFullYear();
-    var rBase=await fetchComTimeout('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE, 15000);
-    var rCad=await fetchComTimeout('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442', 15000);
-    if(!rBase.ok||!rCad.ok)return null;
-    var txtBase=await rBase.text();var txtCad=await rCad.text();
+    var txtBase=await fetchCachedCSV('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE);
+    var txtCad=await fetchCachedCSV('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
+    if(!txtBase||!txtCad)return null;
     var cadLinhas=txtCad.split('\n');
     var cadHeaders=parseCSVLine(cadLinhas[0]||'');
     var cadIdx={};cadHeaders.forEach(function(h,i){cadIdx[n(h)]=i;});
@@ -899,8 +911,8 @@ function procInt(rows,aba){
     var rawTend=dias.dPass>0?Math.round((inf.v/dias.dPass)*(dias.dPass+dias.dFalt)):inf.v;inf.tend=isFinite(rawTend)?rawTend:inf.v;
     inf.metaI=getMetaCorretor(entry[0]);inf.faltI=inf.metaI>0?Math.max(0,inf.metaI-inf.v):null;});
   var tiposSet=new Set();vFilt.forEach(function(r){tiposSet.add(r.tipoNeg||'Não informado');});
-  var todosNaoInfo=[...tiposSet].every(function(t){return t==='Não informado';});
-  var tipos=todosNaoInfo?[]:([...tiposSet].filter(function(t){return t&&t!=='Não informado';}).sort());
+  var todosNaoInfo=Array.from(tiposSet).every(function(t){return t==='Não informado';});
+  var tipos=todosNaoInfo?[]:(Array.from(tiposSet).filter(function(t){return t&&t!=='Não informado';}).sort());
   if(!todosNaoInfo&&tiposSet.has('Não informado'))tipos.push('Não informado');
   var catsSet=new Set();Object.values(porCorCat).forEach(function(o){Object.keys(o).forEach(function(c){catsSet.add(c);});});
   var cats=['Táxi','Aplicativo','Particular','Moto'].filter(function(c){return catsSet.has(c);});
@@ -1068,6 +1080,7 @@ function rendTotal(d){
 }
 
 function setView(v){
+  _renderVersion++; /* Invalida callbacks pendentes imediatamente */
   var root=document.getElementById('root');
   root.classList.add('fading');
   setTimeout(function(){
@@ -1081,6 +1094,7 @@ function setView(v){
   },200);
 }
 function trocarMes(v){
+  _renderVersion++; /* Invalida callbacks pendentes imediatamente */
   var root=document.getElementById('root');
   root.classList.add('fading');
   setTimeout(function(){
