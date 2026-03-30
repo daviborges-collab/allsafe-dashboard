@@ -487,7 +487,8 @@ function parseCSV(txt){
     estado:fc('Estado','estado','uf',11),
     veiculo:fc('Tipo veículo','tipo veiculo','tipo de veiculo',15),
     uso:fc('Tipo de Uso','tipo de uso',16),
-    tipoNeg:fc('Tipo de negociação','tipo de negociacao','Como conheceu','como conheceu',17),
+    tipoNeg:fc('Como conheceu','como conheceu',17),
+    tipoNegociacao:fc('Tipo de negociação','tipo de negociacao',-1),
     data:fc('Data Finalização Vistoria','data finalizacao vistoria','data finalização vistoria','data',2),
   };
 
@@ -507,13 +508,19 @@ function parseCSV(txt){
       veiculo:COL.veiculo>=0&&COL.veiculo<c.length?(c[COL.veiculo]||'').trim().toUpperCase():'',
       uso:COL.uso>=0&&COL.uso<c.length?(c[COL.uso]||'').trim():'',
       tipoNeg:COL.tipoNeg>=0&&COL.tipoNeg<c.length?((c[COL.tipoNeg]||'').trim()||'Não informado'):'Não informado',
+      _tipoNegociacao:COL.tipoNegociacao>=0&&COL.tipoNegociacao<c.length?(c[COL.tipoNegociacao]||'').trim():'',
       data:(c[COL.data]||'').trim(),
       raw:c
     });
   }
   /* ── Filtro: remove registros que NÃO são vendas ── */
   var EXCLUIR_TIPO_NEG=['substituição','substituicao','troca de titularidade'];
-  rows=rows.filter(function(r){var t=(r.tipoNeg||'').toLowerCase().trim();for(var ei=0;ei<EXCLUIR_TIPO_NEG.length;ei++){if(t===EXCLUIR_TIPO_NEG[ei])return false;}return true;});
+  rows=rows.filter(function(r){
+    var t=(r.tipoNeg||'').toLowerCase().trim();
+    var tn=(r._tipoNegociacao||'').toLowerCase().trim();
+    for(var ei=0;ei<EXCLUIR_TIPO_NEG.length;ei++){if(t===EXCLUIR_TIPO_NEG[ei]||tn===EXCLUIR_TIPO_NEG[ei])return false;}
+    return true;
+  });
   return rows;
 }
 
