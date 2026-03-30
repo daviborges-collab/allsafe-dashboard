@@ -302,7 +302,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.4 — Round 5: Fixes 1,2,4,5,6,7,8,9 + Mobile */
+/*! Allsafe Dashboard v3.5 — Round 6: Fixes esc(), fetchNovosCorretores param, renderVersion */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -422,6 +422,8 @@ function destroyAllCharts(){Object.keys(_charts).forEach(destroyChart);}
 function registerChart(key,chart){destroyChart(key);_charts[key]=chart;}
 
 function n(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+/* FIX 2: HTML escape para nomes inseridos via innerHTML */
+function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
 function hojeLocal(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function pv(v){if(!v)return 0;return parseFloat(String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim())||0;}
 function fR(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -651,10 +653,12 @@ async function fetchBaseCorretor(){
   }catch(e){console.warn('fetchBaseCorretor:',e);return null;}
 }
 
-async function fetchNovosCorretores(){
+/* FIX 3: recebe mesParam como parâmetro explícito em vez de ler global MES */
+async function fetchNovosCorretores(mesParam){
   try{
     var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    var partes=MES.split('/');var mesAtual=mN.indexOf(n(partes[0]));var anoAtual=parseInt(partes[1])||new Date().getFullYear();
+    var mp=mesParam||MES;
+    var partes=mp.split('/');var mesAtual=mN.indexOf(n(partes[0]));var anoAtual=parseInt(partes[1])||new Date().getFullYear();
     var txtBase=await fetchCachedCSV('https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv&gid='+GID_BASE);
     var txtCad=await fetchCachedCSV('https://docs.google.com/spreadsheets/d/'+SHEET_CAD+'/export?format=csv&gid=1805273442');
     if(!txtBase||!txtCad)return null;
@@ -988,7 +992,7 @@ function rendExt(d){
   var eqC=['Joao','Bernardo','Renata','Agger'].map(function(k){var cfg=EQCFG[k],s=d.porEq[k];var faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';var mEq=getMetaEquipe(cfg.nome);var faltEq=mEq>0?Math.max(0,mEq-s.v):null;return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'"><span class="eqdot" style="background:'+cfg.cor+'"></span><span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span><div style="text-align:right"><div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div>'+(mEq>0?'<div style="font-size:9px;color:'+cfg.cor+';opacity:.7">Meta '+mEq+(faltEq>0?' · faltam '+faltEq:' ✅')+'</div>':'')+'<div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div></div></div>';}).join('');
   var aP=d.agEst.length?d.agEst.map(function(e){return '<div class="agpill"><b>'+e[1]+'</b>'+e[0]+'</div>';}).join(''):'<span style="font-size:11px;opacity:.5">Sem dados</span>';
   var md=['🥇','🥈','🥉'];
-  var rR=d.rank.slice(0,35).map(function(entry,i){var nm=entry[0],inf=entry[1];var pos=i+1,pc=pos<=3?'p'+pos:'',c=EQCFG[inf.eq]||{cor:'#444',bg:'#F5F5F5'};return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+nm+'</td><td><span class="bdg" style="background:'+c.bg+';color:'+c.cor+'">'+(EQCFG[inf.eq]?EQCFG[inf.eq].nome:inf.eq)+'</span></td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr" style="color:#7B7B9A;font-size:11px">'+fR(inf.val)+'</td></tr>';}).join('');
+  var rR=d.rank.slice(0,35).map(function(entry,i){var nm=entry[0],inf=entry[1];var pos=i+1,pc=pos<=3?'p'+pos:'',c=EQCFG[inf.eq]||{cor:'#444',bg:'#F5F5F5'};return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+esc(nm)+'</td><td><span class="bdg" style="background:'+c.bg+';color:'+c.cor+'">'+(EQCFG[inf.eq]?EQCFG[inf.eq].nome:inf.eq)+'</span></td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr" style="color:#7B7B9A;font-size:11px">'+fR(inf.val)+'</td></tr>';}).join('');
   var lg=['Joao','Bernardo','Renata','Agger'].map(function(k){return '<span class="lgi"><span class="lgsq" style="background:'+EQCFG[k].cor+'"></span>'+EQCFG[k].nome+'</span>';}).join('');
   var pctE=d.metaExt>0?Math.min(100,Math.round((d.tot/d.metaExt)*100)):0;
   var pctPE=d.metaExt>0?Math.min(100,Math.round((d.proj/d.metaExt)*100)):0;
@@ -1003,7 +1007,7 @@ function rendExt(d){
   document.getElementById('root').innerHTML=
     filtroBtns+
     '<div class="krow"><div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+'<span id="comp-ext-tot"></span><div class="kdeco">📋</div></div><div class="kpi kr"><div class="klbl">Adesão total</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Valor de adesão</div><span id="comp-ext-val"></span><div class="kdeco">💰</div></div><div class="kpi km"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div><span id="comp-ext-tick"></span><div class="kdeco">📈</div></div></div>'+
-    '<div class="g2" style="margin-bottom:12px">'+(d.topConExt?'<div class="dest"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">'+d.topConExt[0]+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+d.topConExt[1].v+'</div></div><div><div class="destsl">Equipe</div><div class="destsv" style="font-size:12px">'+(EQCFG[d.topConExt[1].eq]?EQCFG[d.topConExt[1].eq].nome:d.topConExt[1].eq)+'</div></div><div><div class="destsl">Adesão</div><div class="destsv" style="font-size:12px">'+fR(d.topConExt[1].val)+'</div></div></div></div>':'<div class="dest" style="opacity:.5"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">—</div></div>')+buildTendencia(d)+'</div>'+
+    '<div class="g2" style="margin-bottom:12px">'+(d.topConExt?'<div class="dest"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">'+esc(d.topConExt[0])+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+d.topConExt[1].v+'</div></div><div><div class="destsl">Equipe</div><div class="destsv" style="font-size:12px">'+(EQCFG[d.topConExt[1].eq]?EQCFG[d.topConExt[1].eq].nome:d.topConExt[1].eq)+'</div></div><div><div class="destsl">Adesão</div><div class="destsv" style="font-size:12px">'+fR(d.topConExt[1].val)+'</div></div></div></div>':'<div class="dest" style="opacity:.5"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom">—</div></div>')+buildTendencia(d)+'</div>'+
     '<div class="g2" style="margin-bottom:12px"><div class="velcard"><div class="veltit">Meta mensal</div><canvas id="gcVelE" width="260" height="150"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:500">/ '+fN(d.metaExt)+'</span></div><div class="velm">'+pctE+'% atingido</div></div></div>'+buildObjetivo(d,d.metaExt,pctE,alrE)+'</div>'+
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária de vendas — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioExt"></canvas></div></div>'+
     '<div class="gmain" style="margin-bottom:12px"><div class="card"><div class="ctit">Vendas por estado</div><div class="cwrap" style="height:'+Math.max(220,ests.length*32)+'px"><canvas id="gcEst"></canvas></div><div class="lg">'+lg+'</div></div><div class="card"><div class="ctit">Equipes de venda</div>'+eqC+'</div></div>'+
@@ -1023,9 +1027,9 @@ function rendExt(d){
   }
 }
 
-function rendBaseCorretor(data){var el=document.getElementById('painel-base');if(!el)return;var medals=['🥇','🥈','🥉'];var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Interno':{cor:'#555',bg:'#F0F0F0'},'Outro':{cor:'#555',bg:'#F5F5F5'}};var rows=data.top10.map(function(c,i){var pos=i+1,pc=pos<=3?'p'+pos:'';var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td><span class="pos '+pc+'">'+(pos<=3?medals[i]:pos)+'</span></td><td class="fw">'+c.nome+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td class="tr fw" style="color:#5353E9">'+c.itens+'</td><td class="tr" style="color:var(--sub);font-size:11px">'+c.desde+'</td><td class="tr fw" style="color:var(--dark)">'+(c.vmMes||'—')+'</td></tr>';}).join('');el.innerHTML=expandCard('Top 10 corretores — carteira ativa','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th class="tr">Itens</th><th class="tr">1ª venda</th><th class="tr">Média/mês</th></tr></thead><tbody>'+rows+'</tbody></table></div>','top10',false);}
+function rendBaseCorretor(data){var el=document.getElementById('painel-base');if(!el)return;var medals=['🥇','🥈','🥉'];var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Interno':{cor:'#555',bg:'#F0F0F0'},'Outro':{cor:'#555',bg:'#F5F5F5'}};var rows=data.top10.map(function(c,i){var pos=i+1,pc=pos<=3?'p'+pos:'';var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td><span class="pos '+pc+'">'+(pos<=3?medals[i]:pos)+'</span></td><td class="fw">'+esc(c.nome)+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td class="tr fw" style="color:#5353E9">'+c.itens+'</td><td class="tr" style="color:var(--sub);font-size:11px">'+c.desde+'</td><td class="tr fw" style="color:var(--dark)">'+(c.vmMes||'—')+'</td></tr>';}).join('');el.innerHTML=expandCard('Top 10 corretores — carteira ativa','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th class="tr">Itens</th><th class="tr">1ª venda</th><th class="tr">Média/mês</th></tr></thead><tbody>'+rows+'</tbody></table></div>','top10',false);}
 
-function rendNovosCorretores(data){var el=document.getElementById('painel-novos');if(!el)return;var titMes=MES;var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Outro':{cor:'#555',bg:'#F5F5F5'}};if(!data.novos.length){el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhuma 1ª venda neste mês.</div>','novos',false);return;}var rows=data.novos.map(function(c,i){var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td><td class="fw">'+c.nome+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td></tr>';}).join('');el.innerHTML=expandCard('🆕 1ª venda em '+titMes+' ('+data.total+')','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);}
+function rendNovosCorretores(data){var el=document.getElementById('painel-novos');if(!el)return;var titMes=MES;var CAT_CFG={'João':{cor:'#3535C0',bg:'#EEEEFF'},'Bernardo':{cor:'#0A6B54',bg:'#E0FDF6'},'Renata':{cor:'#8B1A90',bg:'#FDE8FD'},'Agger':{cor:'#5C6200',bg:'#F6FBDA'},'Outro':{cor:'#555',bg:'#F5F5F5'}};if(!data.novos.length){el.innerHTML=expandCard('🆕 1ª venda de corretor em '+titMes,'<div style="padding:1.5rem;text-align:center;color:var(--sub);font-size:13px">Nenhuma 1ª venda neste mês.</div>','novos',false);return;}var rows=data.novos.map(function(c,i){var cfg=CAT_CFG[c.cat]||CAT_CFG['Outro'];return '<tr><td style="color:var(--sub);font-size:11px;font-weight:700">'+(i+1)+'</td><td class="fw">'+esc(c.nome)+'</td><td><span class="bdg" style="background:'+cfg.bg+';color:'+cfg.cor+'">'+c.cat+'</span></td><td class="tr" style="font-size:11px;color:var(--sub)">'+c.desde+'</td></tr>';}).join('');el.innerHTML=expandCard('🆕 1ª venda em '+titMes+' ('+data.total+')','<div style="overflow-x:auto"><table class="rt" style="width:100%"><thead><tr><th>#</th><th>Corretor</th><th>Equipe</th><th class="tr">1ª venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>','novos',false);}
 
 function rendCorretoresEstado(data){var el=document.getElementById('painel-estado');if(!el)return;function pillsHtml(lista,cor,numCor){return lista.map(function(e){return '<div style="display:inline-flex;align-items:center;gap:5px;background:'+cor+'22;border:1px solid '+cor+'55;border-radius:20px;padding:3px 10px;font-size:12px;color:'+cor+';transition:transform .15s"><b style="color:'+numCor+';font-size:13px">'+e[1]+'</b>'+e[0]+'</div>';}).join('');}el.innerHTML='<div class="sectit">Corretores por estado — João · Renata · Bernardo</div><div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:11px;color:var(--sub)">Total: <b style="color:var(--dark)">'+data.totalJRB+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.jrb,'#5353E9','#000000')+'</div></div><div class="sectit">Corretores por estado — Agger</div><div style="background:var(--dark);border-radius:16px;padding:1.25rem;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><span style="font-size:11px;color:#6060A0">Total: <b style="color:var(--limao)">'+data.totalAgger+'</b></span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+pillsHtml(data.agger,'#AFF9E4','#fff')+'</div></div>';}
 
@@ -1041,24 +1045,24 @@ function rendInt(d){
   if(d.faltMeta===0)alr='<div class="objalr verd"><span class="objdiff">✅ Meta atingida!</span>Parabéns.</div>';
   else if(d.dif>0)alr='<div class="objalr verm"><span class="objdiff">⚡ +'+d.dif.toFixed(1)+' vendas/dia</span>Precisa acelerar ('+d.ritmo.toFixed(1)+'/dia)</div>';
   else alr='<div class="objalr verd"><span class="objdiff">✅ No caminho certo</span>Ritmo suficiente.</div>';
-  var t1R=d.rank.map(function(entry,i){var nm=entry[0],inf=entry[1];var pos=i+1,pc=pos<=3?'p'+pos:'';var tc=inf.tend>=d.meta?'#0A6B54':inf.tend>=d.tot?'#5353E9':'#C0392B';var metaRowC=getMetaCorretor(nm)||(inf.metaI||0);var faltRowC=metaRowC>0?Math.max(0,metaRowC-inf.v):null;return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+nm+'</td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr fw" style="color:'+tc+'">'+inf.tend+'</td><td class="tr" style="color:#7B7B9A">'+metaRowC+'</td><td class="tr" style="color:'+(faltRowC>0?'#E74C3C':'#2ecc71')+'">'+(faltRowC!==null?faltRowC:'—')+'</td><td class="tr" style="font-size:11px;color:#7B7B9A">'+fR(inf.val)+'</td><td class="tr" style="font-size:11px;color:#7B7B9A">'+(inf.v>0?fR(inf.val/inf.v):'—')+'</td></tr>';}).join('');
+  var t1R=d.rank.map(function(entry,i){var nm=entry[0],inf=entry[1];var pos=i+1,pc=pos<=3?'p'+pos:'';var tc=inf.tend>=d.meta?'#0A6B54':inf.tend>=d.tot?'#5353E9':'#C0392B';var metaRowC=getMetaCorretor(nm)||(inf.metaI||0);var faltRowC=metaRowC>0?Math.max(0,metaRowC-inf.v):null;return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+esc(nm)+'</td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr fw" style="color:'+tc+'">'+inf.tend+'</td><td class="tr" style="color:#7B7B9A">'+metaRowC+'</td><td class="tr" style="color:'+(faltRowC>0?'#E74C3C':'#2ecc71')+'">'+(faltRowC!==null?faltRowC:'—')+'</td><td class="tr" style="font-size:11px;color:#7B7B9A">'+fR(inf.val)+'</td><td class="tr" style="font-size:11px;color:#7B7B9A">'+(inf.v>0?fR(inf.val/inf.v):'—')+'</td></tr>';}).join('');
   var uHd=d.cats.map(function(c){return '<th class="tr">'+c+'</th>';}).join('');
   var uFoot=d.cats.map(function(c){var tot=d.rank.reduce(function(s,e){return s+((d.porCorCat[e[0]]||{})[c]||0);},0);return '<td class="tr">'+tot+'</td>';}).join('');
-  var uRows=d.rank.map(function(entry){var nm=entry[0];var cells=d.cats.map(function(c){return '<td class="tr">'+(d.porCorCat[nm]&&d.porCorCat[nm][c]?d.porCorCat[nm][c]:'-')+'</td>';}).join('');var rowTot=d.cats.reduce(function(s,c){return s+((d.porCorCat[nm]||{})[c]||0);},0);return '<tr><td class="fw">'+nm+'</td>'+cells+'<td class="tr fw" style="color:#5353E9">'+rowTot+'</td></tr>';}).join('');
+  var uRows=d.rank.map(function(entry){var nm=entry[0];var cells=d.cats.map(function(c){return '<td class="tr">'+(d.porCorCat[nm]&&d.porCorCat[nm][c]?d.porCorCat[nm][c]:'-')+'</td>';}).join('');var rowTot=d.cats.reduce(function(s,c){return s+((d.porCorCat[nm]||{})[c]||0);},0);return '<tr><td class="fw">'+esc(nm)+'</td>'+cells+'<td class="tr fw" style="color:#5353E9">'+rowTot+'</td></tr>';}).join('');
   var tpHd=d.tipos.length?d.tipos.map(function(t){return '<th style="text-align:center">'+t+'</th>';}).join(''):'';
-  var tpRows=d.tipos.length?d.rank.map(function(entry){var nm=entry[0];var cells=d.tipos.map(function(t){return '<td>'+(d.porCorTipo[nm]&&d.porCorTipo[nm][t]?d.porCorTipo[nm][t]:'-')+'</td>';}).join('');var rowTot=d.tipos.reduce(function(s,t){return s+((d.porCorTipo[nm]||{})[t]||0);},0);return '<tr><td class="fw">'+nm+'</td>'+cells+'<td class="fw" style="color:#5353E9">'+rowTot+'</td></tr>';}).join(''):'';
+  var tpRows=d.tipos.length?d.rank.map(function(entry){var nm=entry[0];var cells=d.tipos.map(function(t){return '<td>'+(d.porCorTipo[nm]&&d.porCorTipo[nm][t]?d.porCorTipo[nm][t]:'-')+'</td>';}).join('');var rowTot=d.tipos.reduce(function(s,t){return s+((d.porCorTipo[nm]||{})[t]||0);},0);return '<tr><td class="fw">'+esc(nm)+'</td>'+cells+'<td class="fw" style="color:#5353E9">'+rowTot+'</td></tr>';}).join(''):'';
   var tpFoot=d.tipos.length?d.tipos.map(function(t){var s=d.rank.reduce(function(acc,e){return acc+((d.porCorTipo[e[0]]||{})[t]||0);},0);return '<td>'+s+'</td>';}).join(''):'';
   var tpFootTot=d.rank.reduce(function(s,e){return s+d.tipos.reduce(function(ss,t){return ss+((d.porCorTipo[e[0]]||{})[t]||0);},0);},0);
   var corBtns='<div class="filtro-cor-bar"><button class="filtro-cor-btn'+(filtroInt===null?' on':'')+'" onclick="setFiltroInt(null)">Todos</button>';
   d.allRank.forEach(function(entry){var nm=entry[0];var on=filtroInt===nm;
-    corBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" data-cor="'+nm.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" onclick="setFiltroInt(this.dataset.cor)">'+nm.split(' ')[0]+'</button>';
+    corBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" data-cor="'+nm.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" onclick="setFiltroInt(this.dataset.cor)">'+esc(nm.split(' ')[0])+'</button>';
   });
   corBtns+='</div>';
 
   document.getElementById('root').innerHTML=
     corBtns+
     '<div class="krow"><div class="kpi kd"><div class="klbl">Total de vendas</div><div class="kval">'+fN(d.tot)+'</div>'+(d.vendHoje>0?'<div class="khoje">+'+d.vendHoje+' hoje</div>':'<div class="khoje" style="color:#5a5a9a">0 hoje</div>')+'<div class="kdeco">📋</div></div><div class="kpi kr"><div class="klbl">Faturamento adesão</div><div class="kval">'+fR(d.totV)+'</div><div class="ksub">Valor de adesão</div><div class="kdeco">💰</div></div><div class="kpi km"><div class="klbl">Ticket médio adesão</div><div class="kval">'+fR(d.ticket)+'</div><div class="ksub">Por contrato</div><div class="kdeco">📈</div></div></div>'+
-    '<div class="g2" style="margin-bottom:12px"><div class="dest" style="min-height:0"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom" style="font-size:16px;margin-bottom:6px">'+topN+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+topI.v+'</div></div><div><div class="destsl">Faturamento</div><div class="destsv" style="font-size:13px">'+fR(topI.val)+'</div></div><div><div class="destsl">Ticket médio</div><div class="destsv" style="font-size:13px">'+(topI.v>0?fR(topI.val/topI.v):'—')+'</div></div></div></div>'+buildTendencia(d)+'</div>'+
+    '<div class="g2" style="margin-bottom:12px"><div class="dest" style="min-height:0"><div class="destlbl">🏆 Destaque do mês</div><div class="destnom" style="font-size:16px;margin-bottom:6px">'+esc(topN)+'</div><div class="destst"><div><div class="destsl">Vendas</div><div class="destsv">'+topI.v+'</div></div><div><div class="destsl">Faturamento</div><div class="destsv" style="font-size:13px">'+fR(topI.val)+'</div></div><div><div class="destsl">Ticket médio</div><div class="destsv" style="font-size:13px">'+(topI.v>0?fR(topI.val/topI.v):'—')+'</div></div></div></div>'+buildTendencia(d)+'</div>'+
     '<div class="g2" style="margin-bottom:12px"><div class="velcard" style="min-height:0"><div class="veltit">Meta mensal</div><canvas id="gcVel" width="260" height="120"></canvas><div class="velinfo"><div class="velat">'+fN(d.tot)+' <span style="font-size:13px;color:#5a5a9a">/ '+d.meta+'</span></div><div class="velm">'+pct+'% atingido</div><div class="velp">Projeção: '+fN(d.proj)+'</div><div style="font-size:12px;color:#fff;margin-top:4px;font-weight:700;background:rgba(255,255,255,.12);border-radius:6px;padding:3px 10px;display:inline-block">Meta: '+fN(d.meta)+'</div></div></div>'+buildObjetivo(d,d.meta,pct,alr)+'</div>'+
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Evolução diária — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiarioInt"></canvas></div></div>'+
     expandCard('Corretores internos','<div style="overflow-x:auto"><table class="it"><thead><tr><th>#</th><th>Corretor</th><th class="tr">Vendas</th><th class="tr">Tendência</th><th class="tr">Meta</th><th class="tr">Faltam</th><th class="tr">Faturamento</th><th class="tr">Ticket médio</th></tr></thead><tbody>'+t1R+'</tbody></table></div>','cor-int',true)+
@@ -1099,8 +1103,8 @@ function rendTotal(d){
   rendVelocimetro('gcVelTotal',pct,pctP,'GVT');
 }
 
+/* FIX 4: removido _renderVersion++ de setView e trocarMes — já incrementa em atualizar() */
 function setView(v){
-  _renderVersion++;
   var root=document.getElementById('root');
   root.classList.add('fading');
   setTimeout(function(){
@@ -1114,7 +1118,6 @@ function setView(v){
   },200);
 }
 function trocarMes(v){
-  _renderVersion++;
   var root=document.getElementById('root');
   root.classList.add('fading');
   setTimeout(function(){
@@ -1170,7 +1173,8 @@ async function atualizar(){
         console.warn('fetchBaseCorretor:',e);
         var el=document.getElementById('painel-base');if(el)el.innerHTML='<div style="font-size:11px;color:var(--sub);padding:8px">⚠️ Falha ao carregar base de corretores</div>';
       });
-      fetchNovosCorretores().then(function(data){if(thisVersion!==_renderVersion)return;if(data)rendNovosCorretores(data);}).catch(function(e){
+      /* FIX 3: passa MES como parâmetro explícito */
+      fetchNovosCorretores(MES).then(function(data){if(thisVersion!==_renderVersion)return;if(data)rendNovosCorretores(data);}).catch(function(e){
         console.warn('fetchNovosCorretores:',e);
         var el=document.getElementById('painel-novos');if(el)el.innerHTML='<div style="font-size:11px;color:var(--sub);padding:8px">⚠️ Falha ao carregar novos corretores</div>';
       });
