@@ -511,6 +511,9 @@ function parseCSV(txt){
       raw:c
     });
   }
+  /* ── Filtro: remove registros que NÃO são vendas ── */
+  var EXCLUIR_TIPO_NEG=['substituição','substituicao','troca de titularidade'];
+  rows=rows.filter(function(r){var t=(r.tipoNeg||'').toLowerCase().trim();for(var ei=0;ei<EXCLUIR_TIPO_NEG.length;ei++){if(t===EXCLUIR_TIPO_NEG[ei])return false;}return true;});
   return rows;
 }
 
