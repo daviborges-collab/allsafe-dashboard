@@ -811,8 +811,9 @@ function calcDias(aba){
   var mIdx=mN.indexOf(n(partes[0]));var ano=parseInt(partes[1])||hoje.getFullYear();
   if(mIdx<0)return{dPass:0,dFalt:0,mesEncerrado:false};
   var eMes=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano);
+  var hojeD=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate());
   var todos=diasUtil(ano,mIdx);var dPass=0,dFalt=0;
-  if(eMes){dPass=todos.filter(function(d){return d<hoje;}).length;dFalt=todos.filter(function(d){return d>=hoje;}).length;}
+  if(eMes){dPass=todos.filter(function(d){return d<hojeD;}).length;dFalt=todos.filter(function(d){return d>=hojeD;}).length;}
   else if(hoje>new Date(ano,mIdx+1,0)){dPass=todos.length;}
   else{dFalt=todos.length;}
   return{dPass:dPass,dFalt:dFalt,mesEncerrado:!eMes&&hoje>new Date(ano,mIdx+1,0)};
