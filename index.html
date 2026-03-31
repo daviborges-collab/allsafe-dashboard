@@ -815,7 +815,7 @@ function calcDias(aba){
   if(eMes){dPass=todos.filter(function(d){return d<hoje;}).length;dFalt=todos.filter(function(d){return d>=hoje;}).length;}
   else if(hoje>new Date(ano,mIdx+1,0)){dPass=todos.length;}
   else{dFalt=todos.length;}
-  return{dPass:dPass,dFalt:dFalt,mesEncerrado:dFalt===0&&dPass>0};
+  return{dPass:dPass,dFalt:dFalt,mesEncerrado:!eMes&&hoje>new Date(ano,mIdx+1,0)};
 }
 
 function parseDataField(dataStr){
