@@ -302,7 +302,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.5 — Round 6: Fixes esc(), fetchNovosCorretores param, renderVersion */
+/*! Allsafe Dashboard v3.6 — Round 7: Day-of-week labels on daily chart */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -422,7 +422,6 @@ function destroyAllCharts(){Object.keys(_charts).forEach(destroyChart);}
 function registerChart(key,chart){destroyChart(key);_charts[key]=chart;}
 
 function n(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
-/* FIX 2: HTML escape para nomes inseridos via innerHTML */
 function esc(s){var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
 function hojeLocal(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function pv(v){if(!v)return 0;return parseFloat(String(v).replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.').trim())||0;}
@@ -515,7 +514,6 @@ function parseCSV(txt){
       raw:c
     });
   }
-  /* ── Filtro: remove registros que NÃO são vendas ── */
   var EXCLUIR_TIPO_NEG=['substituição','substituicao','troca de titularidade'];
   rows=rows.filter(function(r){
     var t=(r.tipoNeg||'').toLowerCase().trim();
@@ -653,7 +651,6 @@ async function fetchBaseCorretor(){
   }catch(e){console.warn('fetchBaseCorretor:',e);return null;}
 }
 
-/* FIX 3: recebe mesParam como parâmetro explícito em vez de ler global MES */
 async function fetchNovosCorretores(mesParam){
   try{
     var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -710,6 +707,7 @@ function kpiComp(atual,anterior){
   return '<div class="kpi-comp '+cls+'">'+seta+' '+Math.abs(pct)+'% vs mês ant.</div>';
 }
 
+/* ─── ROUND 7: Day-of-week labels on daily chart ─── */
 function rendGraficoDiario(canvasId,porDia,cor,chartKey,mesParam){
   var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   var partes=mesParam.split('/');var mIdx=mN.indexOf(n(partes[0]));
@@ -718,9 +716,10 @@ function rendGraficoDiario(canvasId,porDia,cor,chartKey,mesParam){
   var nDias=new Date(ano,mIdx+1,0).getDate();var hoje=new Date();
   var ultimoDia=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano)?hoje.getDate():nDias;
   var labels=[],data=[],bgColors=[];
-  for(var d=1;d<=nDias;d++){var key=String(d).padStart(2,'0')+'/'+String(mIdx+1).padStart(2,'0');labels.push(d);data.push(porDia[key]||0);bgColors.push(d<=ultimoDia?cor+'CC':'#E4E4E4');}
+  var DIAS_INIT=['D','S','T','Q','Q','S','S'];var daysOfWeek=[];
+  for(var d=1;d<=nDias;d++){var key=String(d).padStart(2,'0')+'/'+String(mIdx+1).padStart(2,'0');labels.push(d);data.push(porDia[key]||0);bgColors.push(d<=ultimoDia?cor+'CC':'#E4E4E4');var dow=new Date(ano,mIdx,d).getDay();daysOfWeek.push({i:DIAS_INIT[dow],w:dow===0||dow===6});}
   var ctx=document.getElementById(canvasId);if(!ctx)return;
-  registerChart(chartKey,new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Vendas',data:data,backgroundColor:bgColors,borderRadius:3,borderSkipped:false}]},plugins:[{id:'barLabels',afterDatasetsDraw:function(chart){var ctx2=chart.ctx;ctx2.save();chart.data.datasets.forEach(function(ds,di){var meta=chart.getDatasetMeta(di);meta.data.forEach(function(bar,i){var val=ds.data[i];if(val>0){ctx2.font='700 9px Inter,sans-serif';ctx2.textAlign='center';ctx2.textBaseline='middle';var y=bar.y,h=bar.base-bar.y;if(h>14){ctx2.fillStyle='#fff';ctx2.fillText(val,bar.x,y+h/2);}else{ctx2.fillStyle=bgColors[i]==='#E4E4E4'?'#bbb':'#5353E9';ctx2.fillText(val,bar.x,y-8);}}});});ctx2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(i){return 'Dia '+i[0].label+' — '+partes[0];},label:function(i){return i.raw+' venda'+(i.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}},layout:{padding:{top:16}}}}));
+  registerChart(chartKey,new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Vendas',data:data,backgroundColor:bgColors,borderRadius:3,borderSkipped:false}]},plugins:[{id:'barLabels',afterDatasetsDraw:function(chart){var ctx2=chart.ctx;ctx2.save();chart.data.datasets.forEach(function(ds,di){var meta=chart.getDatasetMeta(di);meta.data.forEach(function(bar,i){var val=ds.data[i];if(val>0){ctx2.font='700 9px Inter,sans-serif';ctx2.textAlign='center';ctx2.textBaseline='middle';var y=bar.y,h=bar.base-bar.y;if(h>14){ctx2.fillStyle='#fff';ctx2.fillText(val,bar.x,y+h/2);}else{ctx2.fillStyle=bgColors[i]==='#E4E4E4'?'#bbb':'#5353E9';ctx2.fillText(val,bar.x,y-8);}}});});ctx2.restore();}},{id:'dowLabels',afterDraw:function(chart){var c2=chart.ctx;var xA=chart.scales.x;c2.save();c2.textAlign='center';c2.textBaseline='top';for(var di=0;di<daysOfWeek.length;di++){var xp=xA.getPixelForTick(di);if(xp===undefined)continue;var dw=daysOfWeek[di];c2.font=dw.w?'600 8px Inter,sans-serif':'400 8px Inter,sans-serif';c2.fillStyle=dw.w?'#A8A8C0':'#C0C0D0';c2.fillText(dw.i,xp,xA.bottom+2);}c2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(i){var dd=parseInt(i[0].label);var dowN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];var dw2=new Date(ano,mIdx,dd).getDay();return dowN[dw2]+', dia '+dd+' — '+partes[0];},label:function(i){return i.raw+' venda'+(i.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}},layout:{padding:{top:16,bottom:14}}}}));
 }
 
 function rendVelocimetro(canvasId,pct,pctP,chartKey){
@@ -1103,7 +1102,6 @@ function rendTotal(d){
   rendVelocimetro('gcVelTotal',pct,pctP,'GVT');
 }
 
-/* FIX 4: removido _renderVersion++ de setView e trocarMes — já incrementa em atualizar() */
 function setView(v){
   var root=document.getElementById('root');
   root.classList.add('fading');
@@ -1173,7 +1171,6 @@ async function atualizar(){
         console.warn('fetchBaseCorretor:',e);
         var el=document.getElementById('painel-base');if(el)el.innerHTML='<div style="font-size:11px;color:var(--sub);padding:8px">⚠️ Falha ao carregar base de corretores</div>';
       });
-      /* FIX 3: passa MES como parâmetro explícito */
       fetchNovosCorretores(MES).then(function(data){if(thisVersion!==_renderVersion)return;if(data)rendNovosCorretores(data);}).catch(function(e){
         console.warn('fetchNovosCorretores:',e);
         var el=document.getElementById('painel-novos');if(el)el.innerHTML='<div style="font-size:11px;color:var(--sub);padding:8px">⚠️ Falha ao carregar novos corretores</div>';
