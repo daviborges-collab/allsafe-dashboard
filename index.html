@@ -248,7 +248,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.7.1 — Round 9b: fix aba vazia retornando dados fantasma da Base Corretor */
+/*! Allsafe Dashboard v3.8 — Round 9c: header validation, network error propagation, carnaval */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -344,7 +344,7 @@ function getMetaExt(aba){
 
 var FERIADOS_FIXOS=[[1,1],[4,21],[5,1],[9,7],[10,12],[11,2],[11,15],[11,20],[12,25]];
 function calcPascoa(ano){var a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=(h+l-7*m+114)%31+1;return new Date(ano,mes-1,dia);}
-function geraFeriados(a0,a1){var f=[];for(var a=a0;a<=a1;a++){FERIADOS_FIXOS.forEach(function(fd){f.push(a+'-'+String(fd[0]).padStart(2,'0')+'-'+String(fd[1]).padStart(2,'0'));});var p=calcPascoa(a);var sf=new Date(p);sf.setDate(sf.getDate()-2);f.push(sf.getFullYear()+'-'+String(sf.getMonth()+1).padStart(2,'0')+'-'+String(sf.getDate()).padStart(2,'0'));var cc=new Date(p);cc.setDate(cc.getDate()+60);f.push(cc.getFullYear()+'-'+String(cc.getMonth()+1).padStart(2,'0')+'-'+String(cc.getDate()).padStart(2,'0'));}return f;}
+function geraFeriados(a0,a1){var f=[];for(var a=a0;a<=a1;a++){FERIADOS_FIXOS.forEach(function(fd){f.push(a+'-'+String(fd[0]).padStart(2,'0')+'-'+String(fd[1]).padStart(2,'0'));});var p=calcPascoa(a);var sf=new Date(p);sf.setDate(sf.getDate()-2);f.push(sf.getFullYear()+'-'+String(sf.getMonth()+1).padStart(2,'0')+'-'+String(sf.getDate()).padStart(2,'0'));var cm=new Date(p);cm.setDate(cm.getDate()-48);f.push(cm.getFullYear()+'-'+String(cm.getMonth()+1).padStart(2,'0')+'-'+String(cm.getDate()).padStart(2,'0'));var ct=new Date(p);ct.setDate(ct.getDate()-47);f.push(ct.getFullYear()+'-'+String(ct.getMonth()+1).padStart(2,'0')+'-'+String(ct.getDate()).padStart(2,'0'));var cc=new Date(p);cc.setDate(cc.getDate()+60);f.push(cc.getFullYear()+'-'+String(cc.getMonth()+1).padStart(2,'0')+'-'+String(cc.getDate()).padStart(2,'0'));}return f;}
 var FERIADOS=geraFeriados(2026,new Date().getFullYear()+1);
 
 var META_CORRETOR={};
@@ -477,22 +477,29 @@ function parseCSV(txt){
 
 async function fetchRows(aba){
   var baseUrl='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv';
-  /* FIX R9b: quando GID é conhecido, usar SOMENTE o GID (não fallback por nome).
-     Google Sheets retorna dados da primeira aba quando a aba solicitada está vazia,
-     causando dados fantasmas (ex: Base Corretor aparecendo como vendas de Abril). */
   var urlGid=GIDS[aba]?baseUrl+'&gid='+GIDS[aba]:null;
   var urlName=baseUrl+'&sheet='+encodeURIComponent(aba);
   var urls=urlGid?[urlGid]:[urlName];
+  var lastErr=null;
   for(var i=0;i<urls.length;i++){
     try{
       var txt=await fetchCachedCSV(urls[i]);
       if(!txt||!txt.includes(','))continue;
       var linhas=txt.split('\n').filter(function(l){return l.trim();});
       if(linhas.length<2)return[];
+      /* FIX R9c: validar que os headers pertencem a uma aba de vendas.
+         Quando a aba está vazia, Google Sheets pode retornar CSV de outra aba
+         (ex: Base Corretor). Verificamos se existe coluna "Status" — que toda
+         aba de vendas tem mas a Base Corretor não. */
+      var hdr=n(linhas[0]);
+      if(hdr.indexOf('status')< 0)return[];
       var rows=parseCSV(txt);
       return rows;
-    }catch(e){continue;}
+    }catch(e){lastErr=e;continue;}
   }
+  /* FIX BUG-1: se houve erro de rede, propagar para acionar backoff.
+     Se simplesmente não achou dados, retorna [] (aba vazia). */
+  if(lastErr)throw lastErr;
   return[];
 }
 
