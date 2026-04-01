@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -249,7 +248,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-/*! Allsafe Dashboard v3.7 — Round 9: fix zero-vendas (filtro data vazia, proj dPass=0, meta check) */
+/*! Allsafe Dashboard v3.7.1 — Round 9b: fix aba vazia retornando dados fantasma da Base Corretor */
 
 function showSkeleton(){
   var root=document.getElementById('root');
@@ -478,20 +477,23 @@ function parseCSV(txt){
 
 async function fetchRows(aba){
   var baseUrl='https://docs.google.com/spreadsheets/d/'+SHEET+'/export?format=csv';
+  /* FIX R9b: quando GID é conhecido, usar SOMENTE o GID (não fallback por nome).
+     Google Sheets retorna dados da primeira aba quando a aba solicitada está vazia,
+     causando dados fantasmas (ex: Base Corretor aparecendo como vendas de Abril). */
   var urlGid=GIDS[aba]?baseUrl+'&gid='+GIDS[aba]:null;
   var urlName=baseUrl+'&sheet='+encodeURIComponent(aba);
-  var urls=urlGid?[urlGid,urlName]:[urlName];
+  var urls=urlGid?[urlGid]:[urlName];
   for(var i=0;i<urls.length;i++){
     try{
       var txt=await fetchCachedCSV(urls[i]);
       if(!txt||!txt.includes(','))continue;
       var linhas=txt.split('\n').filter(function(l){return l.trim();});
-      if(linhas.length<2)continue;
+      if(linhas.length<2)return[];
       var rows=parseCSV(txt);
-      if(rows.length>0)return rows;
+      return rows;
     }catch(e){continue;}
   }
-  throw new Error('Aba "'+aba+'" não encontrada ou sem dados válidos.');
+  return[];
 }
 
 async function fetchCadastros(){
