@@ -754,9 +754,7 @@ function fN(v){return Math.round(v).toLocaleString('pt-BR');}
 
 function ehInt(e){var l=n(e);return KW_INT.some(function(k){return l.includes(k);});}
 
-function ehAgger(e){var l=n(e);return KW_EXT.Agger.some(function(kw){return l.includes(kw);});}
-
-function detExt(e){var l=n(e);var _ks=Object.keys(KW_EXT);for(var _i=0;_i<_ks.length;_i++){var k=_ks[_i];if(k==='Agger')continue;if(KW_EXT[k].some(function(kw){return l.includes(kw);}))return k;}return null;}
+function detExt(e){var l=n(e);if(KW_EXT.Agger.some(function(kw){return l.includes(kw);}))return'Agger';var _ks=Object.keys(KW_EXT);for(var _i=0;_i<_ks.length;_i++){var k=_ks[_i];if(k==='Agger')continue;if(KW_EXT[k].some(function(kw){return l.includes(kw);}))return k;}return null;}
 
 function ehUtil(d){var dw=d.getDay();if(dw===0||dw===6)return false;var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return!FERIADOS.includes(ds);}
 
@@ -1722,19 +1720,17 @@ function procExt(rows,aba){
 
   var tot=0,totV=0,vendHoje=0;
 
-  var vendHojeEq={Joao:0,Bernardo:0,Renata:0,Robson:0};
+  var vendHojeEq={Joao:0,Bernardo:0,Renata:0,Agger:0,Robson:0};
 
   var porDia={},porDiaEq={};
 
-  var porEq={Joao:{v:0,val:0},Bernardo:{v:0,val:0},Renata:{v:0,val:0},Robson:{v:0,val:0}};
-
-  var agStat={v:0,val:0};var agEstObj={};
+  var porEq={Joao:{v:0,val:0},Bernardo:{v:0,val:0},Renata:{v:0,val:0},Agger:{v:0,val:0},Robson:{v:0,val:0}};
 
   var porEst={},porEstEq={},porCon={};
 
   vFilt.forEach(function(r){
 
-    var eqK=detExt(r.equipe),con=r.consultor;var isAg=ehAgger(r.equipe);
+    var eqK=detExt(r.equipe),con=r.consultor;
 
     var parsed=parseDataField(r.data);var dStr=parsed.dStr;var dia=parsed.dia;
 
@@ -1746,8 +1742,6 @@ function procExt(rows,aba){
 
     if(eqK&&porEq[eqK]){porEq[eqK].v++;porEq[eqK].val+=r.valor;}
 
-    if(isAg){agStat.v++;agStat.val+=r.valor;if(r.estado)agEstObj[r.estado]=(agEstObj[r.estado]||0)+1;}
-
     if(r.estado){porEst[r.estado]=(porEst[r.estado]||0)+1;if(eqK){if(!porEstEq[r.estado])porEstEq[r.estado]={};porEstEq[r.estado][eqK]=(porEstEq[r.estado][eqK]||0)+1;}}
 
     if(eqK&&con){if(!porCon[con])porCon[con]={v:0,val:0,eq:eqK};porCon[con].v++;porCon[con].val+=r.valor;}
@@ -1756,9 +1750,9 @@ function procExt(rows,aba){
 
   tot=0;totV=0;vendHoje=0;
 
-  ['Joao','Bernardo','Renata','Robson'].forEach(function(k){tot+=porEq[k].v;totV+=porEq[k].val;vendHoje+=vendHojeEq[k]||0;});
+  ['Joao','Bernardo','Renata','Agger','Robson'].forEach(function(k){tot+=porEq[k].v;totV+=porEq[k].val;vendHoje+=vendHojeEq[k]||0;});
 
-  var agEst=Object.entries(agEstObj).sort(function(a,b){return b[1]-a[1];}).map(function(e){return[e[0],e[1]];});
+  var agEst=Object.entries(porEstEq).map(function(e){return[e[0],(e[1]['Agger']||0)];}).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];});
 
   var dias=calcDias(aba);var metaExt=filtroExt?getMetaEquipe(EQCFG[filtroExt].nome):getMetaExt(aba);
 
@@ -1772,7 +1766,7 @@ function procExt(rows,aba){
 
   var rankExt=Object.entries(porCon).sort(function(a,b){return b[1].v-a[1].v;});
 
-  return{tot:tot,totV:totV,ticket:tot?totV/tot:0,porEq:porEq,porEst:porEst,porEstEq:porEstEq,agEst:agEst,agStat:agStat,rank:rankExt,topConExt:rankExt[0]||null,vendHoje:vendHoje,vendHojeEq:vendHojeEq,porDia:porDia,porDiaEq:porDiaEq,proj:proj,dPass:dias.dPass,dFalt:dias.dFalt,metaExt:metaExt,faltMeta:faltMeta,ritmo:ritmo,vdNec:vdNec,dif:vdNec-ritmo,porCon:porCon,mesEncerrado:dias.mesEncerrado};
+  return{tot:tot,totV:totV,ticket:tot?totV/tot:0,porEq:porEq,porEst:porEst,porEstEq:porEstEq,agEst:agEst,rank:rankExt,topConExt:rankExt[0]||null,vendHoje:vendHoje,vendHojeEq:vendHojeEq,porDia:porDia,porDiaEq:porDiaEq,proj:proj,dPass:dias.dPass,dFalt:dias.dFalt,metaExt:metaExt,faltMeta:faltMeta,ritmo:ritmo,vdNec:vdNec,dif:vdNec-ritmo,porCon:porCon,mesEncerrado:dias.mesEncerrado};
 
 }
 
@@ -1938,7 +1932,7 @@ function rendExt(d){
 
   var hojeEq=function(k){return d.vendHojeEq&&d.vendHojeEq[k]>0?'<span class="eq-hoje-badge">+'+d.vendHojeEq[k]+' hoje</span>':'';};
 
-  var eqC=['Joao','Bernardo','Renata','Robson'].map(function(k){var cfg=EQCFG[k],s=d.porEq[k];var faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';var mEq=getMetaEquipe(cfg.nome);var faltEq=mEq>0?Math.max(0,mEq-s.v):null;return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'"><span class="eqdot" style="background:'+cfg.cor+'"></span><span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span><div style="text-align:right"><div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div>'+(mEq>0?'<div style="font-size:9px;color:'+cfg.cor+';opacity:.7">Meta '+mEq+(faltEq>0?' · faltam '+faltEq:' ✅')+'</div>':'')+'<div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div></div></div>';}).join('');
+  var eqC=['Joao','Bernardo','Renata','Agger','Robson'].map(function(k){var cfg=EQCFG[k],s=d.porEq[k];var faded=filtroExt&&filtroExt!==k?'opacity:.35;':'';var mEq=getMetaEquipe(cfg.nome);var faltEq=mEq>0?Math.max(0,mEq-s.v):null;return '<div class="eqi" style="background:'+cfg.bg+';'+faded+'"><span class="eqdot" style="background:'+cfg.cor+'"></span><span class="eqnom" style="color:'+cfg.cor+'">'+cfg.nome+hojeEq(k)+'</span><div style="text-align:right"><div class="eqv" style="color:'+cfg.cor+'">'+s.v+'</div>'+(mEq>0?'<div style="font-size:9px;color:'+cfg.cor+';opacity:.7">Meta '+mEq+(faltEq>0?' · faltam '+faltEq:' ✅')+'</div>':'')+'<div class="eqval" style="color:'+cfg.cor+'">'+fR(s.val)+'</div></div></div>';}).join('');
 
   var aP=d.agEst.length?d.agEst.map(function(e){return '<div class="agpill"><b>'+e[1]+'</b>'+e[0]+'</div>';}).join(''):'<span style="font-size:11px;opacity:.5">Sem dados</span>';
 
@@ -1946,7 +1940,7 @@ function rendExt(d){
 
   var rR=d.rank.slice(0,35).map(function(entry,i){var nm=entry[0],inf=entry[1];var pos=i+1,pc=pos<=3?'p'+pos:'',c=EQCFG[inf.eq]||{cor:'#444',bg:'#F5F5F5'};return '<tr><td><span class="pos '+pc+'">'+(pos<=3?md[i]:pos)+'</span></td><td class="fw">'+esc(nm)+'</td><td><span class="bdg" style="background:'+c.bg+';color:'+c.cor+'">'+(EQCFG[inf.eq]?EQCFG[inf.eq].nome:inf.eq)+'</span></td><td class="tr fw" style="color:#5353E9">'+inf.v+'</td><td class="tr" style="color:#7B7B9A;font-size:11px">'+fR(inf.val)+'</td></tr>';}).join('');
 
-  var lg=['Joao','Bernardo','Renata','Robson'].map(function(k){return '<span class="lgi"><span class="lgsq" style="background:'+EQCFG[k].cor+'"></span>'+EQCFG[k].nome+'</span>';}).join('');
+  var lg=['Joao','Bernardo','Renata','Agger','Robson'].map(function(k){return '<span class="lgi"><span class="lgsq" style="background:'+EQCFG[k].cor+'"></span>'+EQCFG[k].nome+'</span>';}).join('');
 
   var pctE=d.metaExt>0?Math.min(100,Math.round((d.tot/d.metaExt)*100)):0;
 
@@ -1964,7 +1958,7 @@ function rendExt(d){
 
   var filtroBtns='<div class="filtro-cor-bar"><button class="filtro-cor-btn'+(filtroExt===null?' on':'')+'" onclick="setFiltroExt(null)">Todas</button>';
 
-  ['Joao','Bernardo','Renata','Robson'].forEach(function(k){var cfg=EQCFG[k];var on=filtroExt===k;var st=on?'background:'+cfg.cor+';color:#fff;box-shadow:0 1px 4px '+cfg.cor+'55':'';filtroBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" style="'+st+'" onclick="setFiltroExt(\''+k+'\')">'+cfg.nome+'</button>';});
+  ['Joao','Bernardo','Renata','Agger','Robson'].forEach(function(k){var cfg=EQCFG[k];var on=filtroExt===k;var st=on?'background:'+cfg.cor+';color:#fff;box-shadow:0 1px 4px '+cfg.cor+'55':'';filtroBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" style="'+st+'" onclick="setFiltroExt(\''+k+'\')">'+cfg.nome+'</button>';});
 
   filtroBtns+='</div>';
 
@@ -1984,7 +1978,7 @@ function rendExt(d){
 
     '<div class="gmain" style="margin-bottom:12px"><div class="card"><div class="ctit">Vendas por estado</div><div class="cwrap" style="height:'+Math.max(220,ests.length*32)+'px"><canvas id="gcEst"></canvas></div><div class="lg">'+lg+'</div></div><div class="card"><div class="ctit">Equipes de venda</div>'+eqC+'</div></div>'+
 
-    '<div class="agger-bar"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><div class="agger-bar-stats"><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Total vendas</div><div style="font-size:28px;font-weight:800;color:var(--limao)">'+d.agStat.v+'</div></div><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Adesão</div><div style="font-size:16px;font-weight:700;color:var(--menta)">'+fR(d.agStat.val)+'</div></div></div></div>'+
+    '<div class="agger-bar"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--roxo);text-transform:uppercase">◆ Agger</span><div class="agger-bar-stats"><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Total vendas</div><div style="font-size:28px;font-weight:800;color:var(--limao)">'+d.porEq.Agger.v+'</div></div><div style="text-align:center"><div style="font-size:10px;color:#6060A0;margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em">Adesão</div><div style="font-size:16px;font-weight:700;color:var(--menta)">'+fR(d.porEq.Agger.val)+'</div></div></div></div>'+
 
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Agger por estado</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+aP+'</div></div>'+
 
@@ -2008,7 +2002,7 @@ function rendExt(d){
 
   if(ctxEst){
 
-    registerChart('GR',new Chart(ctxEst,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Robson'].map(function(k){return{label:EQCFG[k].nome,data:ests.map(function(uf){return(d.porEstEq[uf]||{})[k]||0;}),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4};})},plugins:[{id:'stackedTotals',afterDatasetsDraw:function(chart){if(!chart.data.datasets.length)return;var ctx2=chart.ctx;ctx2.save();var lastDI=chart.data.datasets.length-1;var meta=chart.getDatasetMeta(lastDI);meta.data.forEach(function(bar,i){var tot=0;chart.data.datasets.forEach(function(ds){tot+=ds.data[i]||0;});if(tot>0){ctx2.fillStyle='#5353E9';ctx2.font='700 10px Inter,sans-serif';ctx2.textAlign='left';ctx2.textBaseline='middle';ctx2.fillText(tot,bar.x+6,bar.y);}});ctx2.restore();}}],options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{footer:function(items){return 'Total: '+items.reduce(function(s,i){return s+i.raw;},0)+' vendas';}}}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}},layout:{padding:{right:36}}}}));
+    registerChart('GR',new Chart(ctxEst,{type:'bar',data:{labels:ests,datasets:['Joao','Bernardo','Renata','Agger','Robson'].map(function(k){return{label:EQCFG[k].nome,data:ests.map(function(uf){return(d.porEstEq[uf]||{})[k]||0;}),backgroundColor:EQCFG[k].cor+'CC',borderRadius:4};})},plugins:[{id:'stackedTotals',afterDatasetsDraw:function(chart){if(!chart.data.datasets.length)return;var ctx2=chart.ctx;ctx2.save();var lastDI=chart.data.datasets.length-1;var meta=chart.getDatasetMeta(lastDI);meta.data.forEach(function(bar,i){var tot=0;chart.data.datasets.forEach(function(ds){tot+=ds.data[i]||0;});if(tot>0){ctx2.fillStyle='#5353E9';ctx2.font='700 10px Inter,sans-serif';ctx2.textAlign='left';ctx2.textBaseline='middle';ctx2.fillText(tot,bar.x+6,bar.y);}});ctx2.restore();}}],options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{footer:function(items){return 'Total: '+items.reduce(function(s,i){return s+i.raw;},0)+' vendas';}}}},scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{color:'#5353E9',font:{size:11,weight:'600'}}}},layout:{padding:{right:36}}}}));
 
   }
 
@@ -2422,4 +2416,12 @@ async function atualizar(){
 
   atualizar();
 
- 
+  _intervaloAtualizar=setInterval(atualizar,60000);
+
+})();
+
+</script>
+
+</body>
+
+</html>
