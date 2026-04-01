@@ -1021,7 +1021,7 @@ function rendInt(d){
   var tpFootTot=d.rank.reduce(function(s,e){return s+d.tipos.reduce(function(ss,t){return ss+((d.porCorTipo[e[0]]||{})[t]||0);},0);},0);
   var corBtns='<div class="filtro-cor-bar"><button class="filtro-cor-btn'+(filtroInt===null?' on':'')+'" onclick="setFiltroInt(null)">Todos</button>';
   d.allRank.forEach(function(entry){var nm=entry[0];var on=filtroInt===nm;
-    corBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" data-cor="'+nm.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/\x3c/g,'&lt;')+'" onclick="setFiltroInt(this.dataset.cor)">'+esc(nm.split(' ')[0])+'</button>';
+    corBtns+='<button class="filtro-cor-btn'+(on?' on':'')+'" data-cor="'+nm.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" onclick="setFiltroInt(this.dataset.cor)">'+esc(nm.split(' ')[0])+'</button>';
   });
   corBtns+='</div>';
 
