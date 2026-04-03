@@ -378,13 +378,26 @@ function rendTiming(id,t,total,key){
   registerChart(key,new Chart(cv,{type:'bar',data:{labels:labels,datasets:[{label:'%',data:pcts,backgroundColor:cores,borderRadius:4,borderSkipped:false}]},plugins:[{id:'pL',afterDatasetsDraw:function(ch){var c2=ch.ctx;c2.save();ch.data.datasets.forEach(function(ds,di){var m=ch.getDatasetMeta(di);m.data.forEach(function(bar,i){var v=ds.data[i];if(v>0){c2.font='700 11px Inter,sans-serif';c2.textAlign='center';c2.fillStyle='#333';c2.fillText(v.toFixed(1)+'%',bar.x,bar.y-10);c2.font='400 9px Inter,sans-serif';c2.fillStyle='#888';c2.fillText('('+fN(vals[i])+')',bar.x,bar.y-22);}});});c2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return it.raw+'% ('+fN(vals[it.dataIndex])+' boletos)';}}}},scales:{x:{grid:{display:false},ticks:{color:'#555',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},callback:function(v){return v+'%';}},beginAtZero:true}},layout:{padding:{top:30}}}}));
 }
 
+/* Grafico pizza: status dos boletos */
+function rendStatusPizza(id,porStatus,key){
+  var cv=document.getElementById(id);if(!cv)return;
+  var entries=Object.entries(porStatus).sort(function(a,b){return b[1]-a[1];});
+  if(!entries.length)return;
+  var labels=entries.map(function(e){return e[0];});
+  var vals=entries.map(function(e){return e[1];});
+  var coresMap={'Pago':'#2ecc71','Vencido':'#E74C3C'};
+  var defaultCores=['#f39c12','#3498db','#9b59b6','#1abc9c','#e67e22','#8e44ad'];
+  var di=0;
+  var bgCores=labels.map(function(l){return coresMap[l]||(defaultCores[di++%defaultCores.length]);});
+  var total=vals.reduce(function(s,v){return s+v;},0);
+  registerChart(key,new Chart(cv,{type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:bgCores,borderWidth:2,borderColor:'#fff'}]},plugins:[{id:'cL',afterDraw:function(ch){var c2=ch.ctx;c2.save();c2.textAlign='center';c2.textBaseline='middle';var cx=(ch.chartArea.left+ch.chartArea.right)/2;var cy=(ch.chartArea.top+ch.chartArea.bottom)/2;c2.font='800 18px Inter';c2.fillStyle='#210B4E';c2.fillText(fN(total),cx,cy-6);c2.font='400 10px Inter';c2.fillStyle='#7B7B9A';c2.fillText('boletos',cx,cy+10);c2.restore();}}],options:{responsive:true,maintainAspectRatio:true,cutout:'55%',plugins:{legend:{position:'bottom',labels:{padding:12,usePointStyle:true,pointStyle:'circle',font:{size:11,family:'Inter'}}},tooltip:{callbacks:{label:function(it){var pct=total>0?(it.raw/total*100).toFixed(1):'0';return it.label+': '+fN(it.raw)+' ('+pct+'%)';}}}}}}));
+}
+
 function render(d){
   destroyAllCharts();
   var refInfo=REFS[MES];
   var refHtml=refInfo?'<div class="ref-badge">Refer\u00EAncia '+esc(refInfo.ref)+' &mdash; vencimento '+esc(refInfo.venc)+'</div>':'';
-  var stHtml='';var stE=Object.entries(d.porStatus).sort(function(a,b){return b[1]-a[1];});
-  var maxSt=stE.length>0?stE[0][1]:1;
-  stE.forEach(function(e){var pct=Math.round(e[1]/maxSt*100);var cor=e[0]==='Pago'?'#2ecc71':isStatusVencido(e[0])?'#E74C3C':isStatusAVencer(e[0])?'#f39c12':'#7B7B9A';stHtml+='<div class="bar-row"><div class="bar-label" style="color:'+cor+'">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div><div class="bar-count">'+fN(e[1])+'</div></div>';});
+  /* Status dados para pizza */
   var estHtml='';var maxE=d.porEstado.length>0?d.porEstado[0][1]:1;
   d.porEstado.slice(0,20).forEach(function(e){var pct=Math.round(e[1]/maxE*100);estHtml+='<div class="bar-row"><div class="bar-label">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--roxo)"></div></div><div class="bar-count">'+fN(e[1])+'</div></div>';});
   var churnCor=d.churn<=3?'#2ecc71':d.churn<=5?'#f39c12':'#E74C3C';
@@ -397,34 +410,41 @@ function render(d){
 
   document.getElementById('root').innerHTML=
     refHtml+
+    /* KPIs */
     '<div class="krow">'+
       '<div class="kpi kd"><div class="klbl">Boletos gerados</div><div class="kval">'+fR(d.totBol)+'</div><div class="ksub">'+fN(d.total)+' boletos</div><div class="kdeco">&#x1F4CB;</div></div>'+
       '<div class="kpi kr"><div class="klbl">Valor pago</div><div class="kval">'+fR(d.totPago)+'</div><div class="ksub">Pagamentos confirmados</div><div class="kdeco">&#x1F4B0;</div></div>'+
       '<div class="kpi km"><div class="klbl">Valor em aberto</div><div class="kval">'+fR(d.totAberto)+'</div><div class="ksub">Vencidos + \u00C0 vencer</div><div class="kdeco">&#x23F3;</div></div>'+
       '<div class="kpi kw"><div class="klbl">Segurados</div><div class="kval">'+fN(d.qtdSeg)+'</div><div class="ksub">Contratos \u00FAnicos</div><div class="kdeco">&#x1F464;</div></div>'+
     '</div>'+
-    /* Descontos: normal + 50% separado */
+    /* Cancelados + Status pizza */
     '<div class="g2" style="margin-bottom:12px">'+
-      '<div class="card"><div class="ctit">Descontos concedidos</div><div style="font-size:28px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totDescNormal)+'</div><div style="font-size:12px;color:var(--sub);margin-bottom:8px">em '+fN(d.cntDescNormal)+' boletos com desconto</div><div style="display:inline-block;background:rgba(83,83,233,.08);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--roxo)">'+fPct(d.descPctNormal)+' desconto m\u00E9dio</div></div>'+
-      '<div class="desc50-card"><div class="desc50-lbl">Segurados com 50% de desconto</div><div class="desc50-val">'+fN(d.cntDesc50)+' segurados</div><div class="desc50-sub">Desconto total: '+fR(d.totDesc50)+'</div><div class="desc50-sub" style="margin-top:4px">Valor original: '+fR(d.somaOrigDesc50||d.totDesc50*2)+'</div></div>'+
-    '</div>'+
-    '<div class="g3">'+
       '<div class="card"><div class="ctit">Cancelados no m\u00EAs</div><div style="font-size:42px;font-weight:800;color:#E74C3C;margin-bottom:4px">'+fN(d.totCan)+'</div><div style="font-size:12px;color:var(--sub)">contratos cancelados</div></div>'+
-      '<div class="card" style="grid-column:span 2"><div class="ctit">Status dos boletos</div>'+stHtml+'</div>'+
+      '<div class="card"><div class="ctit">Status dos boletos</div><div style="position:relative;width:100%;max-width:350px;margin:0 auto"><canvas id="gcStatus"></canvas></div></div>'+
     '</div>'+
+    /* Churn */
     '<div class="g2">'+
       '<div class="velcard"><div class="veltit">Churn</div><canvas id="gcChurn" width="200" height="110"></canvas><div class="velinfo"><div class="churn-big" style="color:'+churnCor+'">'+fPct(d.churn)+'</div><div class="churn-meta">Meta: '+d.metaChurn+'%</div></div></div>'+
       '<div class="objcard"><div class="objtit">Inadimpl\u00EAncia &amp; Meta Churn</div><div style="display:flex;gap:24px;margin-bottom:14px"><div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Inadimpl\u00EAncia</div><div style="font-size:28px;font-weight:800;color:'+inadCor+'">'+fPct(d.inad)+'</div><div style="font-size:11px;color:#5a5a9a">'+fN(d.cntVencido)+' vencidos / '+fN(d.total)+' total</div></div><div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cancelados</div><div style="font-size:28px;font-weight:800;color:#E74C3C">'+fN(d.totCan)+'</div></div></div>'+(d.churn>d.metaChurn?'<div class="objalr verm"><span class="objdiff">Faltam '+fN(d.bolMeta)+' pagamentos</span>Para churn cair de '+fPct(d.churn)+' para '+d.metaChurn+'%</div>':'<div class="objalr verd"><span class="objdiff">Churn dentro da meta</span>'+fPct(d.churn)+' &#x2264; '+d.metaChurn+'%</div>')+'</div>'+
     '</div>'+
+    /* Frota */
     '<div class="g2">'+
       '<div class="card"><div class="ctit">Frota &mdash; Tipo de ve\u00EDculo</div><div style="display:flex;gap:16px;margin-bottom:12px"><div class="eqi" style="background:#EEEEFF;flex:1"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Carros</span><div style="text-align:right"><div class="eqv" style="color:var(--roxo)">'+fN(d.carros)+'</div><div class="eqval" style="color:var(--roxo)">'+cPct+'%</div></div></div><div class="eqi" style="background:#FDE8FD;flex:1"><span class="eqdot" style="background:#8B1A90"></span><span class="eqnom" style="color:#8B1A90">Motos</span><div style="text-align:right"><div class="eqv" style="color:#8B1A90">'+fN(d.motos)+'</div><div class="eqval" style="color:#8B1A90">'+mPct+'%</div></div></div></div>'+(d.caminhoes>0?'<div class="eqi" style="background:#F6FBDA"><span class="eqdot" style="background:#5C6200"></span><span class="eqnom" style="color:#5C6200">Caminh\u00F5es</span><div class="eqv" style="color:#5C6200">'+fN(d.caminhoes)+'</div></div>':'')+'</div>'+
       '<div class="card"><div class="ctit">Carros &mdash; Tipo de uso</div><div class="eqi" style="background:#E0FDF6;margin-bottom:6px"><span class="eqdot" style="background:#0A6B54"></span><span class="eqnom" style="color:#0A6B54">Particular</span><div class="eqv" style="color:#0A6B54">'+fN(d.usoP)+'</div></div><div class="eqi" style="background:#FFF4E0;margin-bottom:6px"><span class="eqdot" style="background:#C08A00"></span><span class="eqnom" style="color:#C08A00">T\u00E1xi</span><div class="eqv" style="color:#C08A00">'+fN(d.usoT)+'</div></div><div class="eqi" style="background:#EEEEFF"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Uso Profissional</span><div class="eqv" style="color:var(--roxo)">'+fN(d.usoPr)+'</div></div></div>'+
     '</div>'+
+    /* Pagamentos por dia */
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Pagamentos por dia &mdash; '+esc(displayMes)+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPgDia)+' pagamentos)</span></div><div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;font-weight:600;flex-wrap:wrap"><span style="color:#93ADFC">&#9632; M\u00EAs da refer\u00EAncia</span><span style="color:#5353E9">&#9632; M\u00EAs do vencimento</span><span style="color:#f39c12">&#9632; Prazo (at\u00E9 dia 15)</span><span style="color:#E4E4E4">&#9632; Futuro</span></div><div class="grafico-diario-wrap" style="height:220px"><canvas id="gcDiario"></canvas></div></div>'+
+    /* Timing */
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Prazo de pagamento vs vencimento'+(d.timingTotal>0?' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(d.timingTotal)+' boletos analisados)</span>':'')+'</div><div class="timing-wrap"><canvas id="gcTiming"></canvas></div></div>'+
+    /* Vencimentos + Estados */
     '<div class="g2">'+
       '<div class="card"><div class="ctit">Segurados por data de vencimento</div><div style="position:relative;width:100%;max-width:400px;margin:0 auto"><canvas id="gcVenc"></canvas></div></div>'+
       '<div class="card"><div class="ctit">Ve\u00EDculos por estado</div>'+estHtml+'</div>'+
+    '</div>'+
+    /* Descontos — no final */
+    '<div class="g2" style="margin-bottom:12px">'+
+      '<div class="card"><div class="ctit">Descontos concedidos</div><div style="font-size:28px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totDescNormal)+'</div><div style="font-size:12px;color:var(--sub);margin-bottom:8px">em '+fN(d.cntDescNormal)+' boletos com desconto</div><div style="display:inline-block;background:rgba(83,83,233,.08);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--roxo)">'+fPct(d.descPctNormal)+' desconto m\u00E9dio</div></div>'+
+      '<div class="desc50-card"><div class="desc50-lbl">Segurados com 50% de desconto</div><div class="desc50-val">'+fN(d.cntDesc50)+' segurados</div><div class="desc50-sub">Desconto total: '+fR(d.totDesc50)+'</div><div class="desc50-sub" style="margin-top:4px">Valor original: '+fR(d.somaOrigDesc50)+'</div></div>'+
     '</div>'+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">&#x2B07; Salvar espelho do dia</button>';
 
@@ -432,6 +452,7 @@ function render(d){
   rendVelocimetro('gcChurn',d.churn,'VCHURN');
   rendTiming('gcTiming',d.timing,d.timingTotal,'GTIMING');
   rendVencimentos('gcVenc',d.porVencimento,'GVENC');
+  rendStatusPizza('gcStatus',d.porStatus,'GSTATUS');
 }
 
 function exportarDashboard(){html2canvas(document.body,{scale:1.5,useCORS:true,backgroundColor:'#F4F4F4'}).then(function(c){var a=document.createElement('a');a.download='allsafe-cobrancas-'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.png';a.href=c.toDataURL('image/png');a.click();}).catch(function(e){alert('Erro: '+e.message);});}
