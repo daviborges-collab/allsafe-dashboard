@@ -417,15 +417,17 @@ function render(d){
       '<div class="kpi km"><div class="klbl">Valor em aberto</div><div class="kval">'+fR(d.totAberto)+'</div><div class="ksub">Vencidos + \u00C0 vencer</div><div class="kdeco">&#x23F3;</div></div>'+
       '<div class="kpi kw"><div class="klbl">Segurados</div><div class="kval">'+fN(d.qtdSeg)+'</div><div class="ksub">Contratos \u00FAnicos</div><div class="kdeco">&#x1F464;</div></div>'+
     '</div>'+
-    /* Cancelados + Status pizza */
+    /* Status pizza + Inadimplencia/Churn lado a lado */
     '<div class="g2" style="margin-bottom:12px">'+
-      '<div class="card"><div class="ctit">Cancelados no m\u00EAs</div><div style="font-size:42px;font-weight:800;color:#E74C3C;margin-bottom:4px">'+fN(d.totCan)+'</div><div style="font-size:12px;color:var(--sub)">contratos cancelados</div></div>'+
       '<div class="card"><div class="ctit">Status dos boletos</div><div style="position:relative;width:100%;max-width:350px;margin:0 auto"><canvas id="gcStatus"></canvas></div></div>'+
-    '</div>'+
-    /* Churn */
-    '<div class="g2">'+
-      '<div class="velcard"><div class="veltit">Churn</div><canvas id="gcChurn" width="200" height="110"></canvas><div class="velinfo"><div class="churn-big" style="color:'+churnCor+'">'+fPct(d.churn)+'</div><div class="churn-meta">Meta: '+d.metaChurn+'%</div></div></div>'+
-      '<div class="objcard"><div class="objtit">Inadimpl\u00EAncia &amp; Meta Churn</div><div style="display:flex;gap:24px;margin-bottom:14px"><div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Inadimpl\u00EAncia</div><div style="font-size:28px;font-weight:800;color:'+inadCor+'">'+fPct(d.inad)+'</div><div style="font-size:11px;color:#5a5a9a">'+fN(d.cntVencido)+' vencidos / '+fN(d.total)+' total</div></div><div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cancelados</div><div style="font-size:28px;font-weight:800;color:#E74C3C">'+fN(d.totCan)+'</div></div></div>'+(d.churn>d.metaChurn?'<div class="objalr verm"><span class="objdiff">Faltam '+fN(d.bolMeta)+' pagamentos</span>Para churn cair de '+fPct(d.churn)+' para '+d.metaChurn+'%</div>':'<div class="objalr verd"><span class="objdiff">Churn dentro da meta</span>'+fPct(d.churn)+' &#x2264; '+d.metaChurn+'%</div>')+'</div>'+
+      '<div class="objcard"><div class="objtit">Inadimpl\u00EAncia &amp; Meta Churn</div>'+
+        '<div style="display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap">'+
+          '<div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Churn atual</div><div style="font-size:28px;font-weight:800;color:'+churnCor+'">'+fPct(d.churn)+'</div><div style="font-size:11px;color:#5a5a9a">Meta: '+d.metaChurn+'%</div></div>'+
+          '<div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Inadimpl\u00EAncia</div><div style="font-size:28px;font-weight:800;color:'+inadCor+'">'+fPct(d.inad)+'</div><div style="font-size:11px;color:#5a5a9a">'+fN(d.cntVencido)+' vencidos / '+fN(d.total)+' total</div></div>'+
+          '<div><div style="font-size:10px;color:#5a5a9a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cancelados</div><div style="font-size:28px;font-weight:800;color:#E74C3C">'+fN(d.totCan)+'</div></div>'+
+        '</div>'+
+        (d.churn>d.metaChurn?'<div class="objalr verm"><span class="objdiff">Faltam '+fN(d.bolMeta)+' pagamentos</span>Para churn cair de '+fPct(d.churn)+' para '+d.metaChurn+'%</div>':'<div class="objalr verd"><span class="objdiff">Churn dentro da meta</span>'+fPct(d.churn)+' &#x2264; '+d.metaChurn+'%</div>')+
+      '</div>'+
     '</div>'+
     /* Frota */
     '<div class="g2">'+
@@ -436,20 +438,19 @@ function render(d){
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Pagamentos por dia &mdash; '+esc(displayMes)+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPgDia)+' pagamentos)</span></div><div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;font-weight:600;flex-wrap:wrap"><span style="color:#93ADFC">&#9632; M\u00EAs da refer\u00EAncia</span><span style="color:#5353E9">&#9632; M\u00EAs do vencimento</span><span style="color:#f39c12">&#9632; Prazo (at\u00E9 dia 15)</span><span style="color:#E4E4E4">&#9632; Futuro</span></div><div class="grafico-diario-wrap" style="height:220px"><canvas id="gcDiario"></canvas></div></div>'+
     /* Timing */
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Prazo de pagamento vs vencimento'+(d.timingTotal>0?' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(d.timingTotal)+' boletos analisados)</span>':'')+'</div><div class="timing-wrap"><canvas id="gcTiming"></canvas></div></div>'+
+    /* Descontos */
+    '<div class="g2" style="margin-bottom:12px">'+
+      '<div class="card"><div class="ctit">Descontos concedidos</div><div style="font-size:28px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totDescNormal)+'</div><div style="font-size:12px;color:var(--sub);margin-bottom:8px">em '+fN(d.cntDescNormal)+' boletos com desconto</div><div style="display:inline-block;background:rgba(83,83,233,.08);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--roxo)">'+fPct(d.descPctNormal)+' desconto m\u00E9dio</div></div>'+
+      '<div class="desc50-card"><div class="desc50-lbl">Segurados com 50% de desconto</div><div class="desc50-val">'+fN(d.cntDesc50)+' segurados</div><div class="desc50-sub">Desconto total: '+fR(d.totDesc50)+'</div><div class="desc50-sub" style="margin-top:4px">Valor original: '+fR(d.somaOrigDesc50)+'</div></div>'+
+    '</div>'+
     /* Vencimentos + Estados */
     '<div class="g2">'+
       '<div class="card"><div class="ctit">Segurados por data de vencimento</div><div style="position:relative;width:100%;max-width:400px;margin:0 auto"><canvas id="gcVenc"></canvas></div></div>'+
       '<div class="card"><div class="ctit">Ve\u00EDculos por estado</div>'+estHtml+'</div>'+
     '</div>'+
-    /* Descontos — no final */
-    '<div class="g2" style="margin-bottom:12px">'+
-      '<div class="card"><div class="ctit">Descontos concedidos</div><div style="font-size:28px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totDescNormal)+'</div><div style="font-size:12px;color:var(--sub);margin-bottom:8px">em '+fN(d.cntDescNormal)+' boletos com desconto</div><div style="display:inline-block;background:rgba(83,83,233,.08);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--roxo)">'+fPct(d.descPctNormal)+' desconto m\u00E9dio</div></div>'+
-      '<div class="desc50-card"><div class="desc50-lbl">Segurados com 50% de desconto</div><div class="desc50-val">'+fN(d.cntDesc50)+' segurados</div><div class="desc50-sub">Desconto total: '+fR(d.totDesc50)+'</div><div class="desc50-sub" style="margin-top:4px">Valor original: '+fR(d.somaOrigDesc50)+'</div></div>'+
-    '</div>'+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">&#x2B07; Salvar espelho do dia</button>';
 
   rendGraficoDiario('gcDiario',d.porDia,'GDC',MES);
-  rendVelocimetro('gcChurn',d.churn,'VCHURN');
   rendTiming('gcTiming',d.timing,d.timingTotal,'GTIMING');
   rendVencimentos('gcVenc',d.porVencimento,'GVENC');
   rendStatusPizza('gcStatus',d.porStatus,'GSTATUS');
