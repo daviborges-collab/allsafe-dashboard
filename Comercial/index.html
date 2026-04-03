@@ -452,7 +452,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 
   <div class="header-left">
 
-    <img class="logo-img" src="../logo.png" alt="Allsafe">
+    <img class="logo-img" src="https://daviborges-collab.github.io/allsafe-dashboard/logo.png" alt="Allsafe">
 
     <div class="header-div"></div>
 
@@ -1338,8 +1338,12 @@ function kpiComp(atual,anterior){
 
   var seta=pct>0?'▲':pct<0?'▼':'—';
 
-  var diaHoje=new Date().getDate();
-  return '<div class="kpi-comp '+cls+'">'+seta+' '+Math.abs(pct)+'% vs mês ant. (até dia '+diaHoje+')</div>';
+  var hoje=new Date();
+  var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var partesAtual=MES.split('/');var mIdxAtual=mN.indexOf(n(partesAtual[0]));var anoAtual=parseInt(partesAtual[1])||hoje.getFullYear();
+  var mesEmAndamento=(hoje.getMonth()===mIdxAtual&&hoje.getFullYear()===anoAtual);
+  var sufixo=mesEmAndamento?' (até dia '+hoje.getDate()+')':'';
+  return '<div class="kpi-comp '+cls+'">'+seta+' '+Math.abs(pct)+'% vs mês ant.'+sufixo+'</div>';
 
 }
 
@@ -1643,14 +1647,25 @@ async function fetchMesAnterior(){
 
   try{
     var rows=await fetchRows(MESES[idx-1]);
-    var hoje=new Date();var diaHoje=hoje.getDate();
-    /* Filtra para comparar apenas até o mesmo dia do mês */
-    var rowsFilt=rows.filter(function(r){
-      var parsed=parseDataField(r.data);
-      if(!parsed.dia)return false;
-      var dia=parseInt(parsed.dia.split('/')[0]);
-      return dia<=diaHoje;
-    });
+    var hoje=new Date();
+    /* Verifica se o mês ATUAL é o mês corrente (em andamento) */
+    var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    var partesAtual=MES.split('/');var mIdxAtual=mN.indexOf(n(partesAtual[0]));var anoAtual=parseInt(partesAtual[1])||hoje.getFullYear();
+    var mesEmAndamento=(hoje.getMonth()===mIdxAtual&&hoje.getFullYear()===anoAtual);
+    var rowsFilt;
+    if(mesEmAndamento){
+      /* Mês em andamento: filtra até o mesmo dia para comparação justa */
+      var diaHoje=hoje.getDate();
+      rowsFilt=rows.filter(function(r){
+        var parsed=parseDataField(r.data);
+        if(!parsed.dia)return false;
+        var dia=parseInt(parsed.dia.split('/')[0]);
+        return dia<=diaHoje;
+      });
+    }else{
+      /* Mês encerrado: compara o mês inteiro */
+      rowsFilt=rows;
+    }
     var vE=rowsFilt.filter(function(r){return STATUS_OK.includes(n(r.status))&&!ehInt(r.equipe);});
     var vI=rowsFilt.filter(function(r){return STATUS_OK.includes(n(r.status))&&ehInt(r.equipe);});
     return{ext:{tot:vE.length,totV:vE.reduce(function(s,r){return s+r.valor;},0)},int:{tot:vI.length,totV:vI.reduce(function(s,r){return s+r.valor;},0)}};
