@@ -251,11 +251,8 @@ function processar(rows,cancelados){
   var cntVencido=0,total=rows.length;var porDia={};
   var carros=0,motos=0,caminhoes=0;var usoP=0,usoT=0,usoPr=0;
   var porEstado={};var porStatus={};
-  /* Timing buckets:
-     Vencimentos sao 1/5/10/15/20/25/30 do mes de vencimento.
-     Segurado tem ate dia 15 do mes posterior ao vencimento.
-     Buckets: antes do vencimento, no mes do vencimento, ate 15 do mes seguinte, atrasado */
-  var timing={antesVenc:0,noMesVenc:0,mesSegAte15:0,atrasado:0};
+  /* Timing buckets: diff dias entre pagamento e vencimento */
+  var timing={antes:0,noDia:0,ate5:0,ate10:0,ate20:0,ate30:0,mais30:0};
   var timingTotal=0;
   rows.forEach(function(r){
     totBol+=r.valorOriginal;
@@ -275,18 +272,23 @@ function processar(rows,cancelados){
     }
     if(isStatusAberto(r.status))totAberto+=r.valorOriginal;
     if(isStatusVencido(r.status))cntVencido++;
-    if(isStatusPago(r.status)&&r.dataPag){var dia=parseDia(r.dataPag);if(dia)porDia[dia]=(porDia[dia]||0)+1;}
-    /* timing */
+    /* porDia usa data completa YYYY-MM-DD como chave para abranger multiplos meses */
+    if(isStatusPago(r.status)&&r.dataPag){
+      var dpObj=parseDate(r.dataPag);
+      if(dpObj){var dk=dpObj.getFullYear()+'-'+String(dpObj.getMonth()+1).padStart(2,'0')+'-'+String(dpObj.getDate()).padStart(2,'0');porDia[dk]=(porDia[dk]||0)+1;}
+    }
+    /* timing: diff dias entre pagamento e vencimento */
     if(isStatusPago(r.status)&&r.dataPag&&r.dataVenc){
       var dp=parseDate(r.dataPag);var dv=parseDate(r.dataVenc);
       if(dp&&dv){
-        timingTotal++;
-        var mesVenc=dv.getMonth();var anoVenc=dv.getFullYear();
-        var limite15=new Date(anoVenc,mesVenc+1,15);
-        if(dp<dv){timing.antesVenc++;}
-        else if(dp.getMonth()===mesVenc&&dp.getFullYear()===anoVenc){timing.noMesVenc++;}
-        else if(dp<=limite15){timing.mesSegAte15++;}
-        else{timing.atrasado++;}
+        var diff=diffDays(dp,dv);timingTotal++;
+        if(diff<0)timing.antes++;
+        else if(diff===0)timing.noDia++;
+        else if(diff<=5)timing.ate5++;
+        else if(diff<=10)timing.ate10++;
+        else if(diff<=20)timing.ate20++;
+        else if(diff<=30)timing.ate30++;
+        else timing.mais30++;
       }
     }
     var tv=r.tipoVeiculo;
@@ -318,24 +320,55 @@ function rendVelocimetro(id,pct,key){
   registerChart(key,new Chart(cv,{type:'doughnut',data:{datasets:[{data:[cap,Math.max(0,100-cap)],backgroundColor:[cor,'#1a1a3e'],borderWidth:0,circumference:180,rotation:270},{data:[3,97],backgroundColor:['rgba(46,204,113,0.2)','transparent'],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}}));
 }
 
+/* Grafico diario expandido: cobre mes anterior ao vencimento + mes do vencimento + ate dia 15 do mes seguinte.
+   Ex: Ref Fevereiro, venc Marco -> mostra Fev inteiro + Marco inteiro + 1-15 Abril.
+   porDia usa chaves YYYY-MM-DD. */
 function rendGraficoDiario(id,porDia,cor,key,mesP){
   var mN=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  var partes=mesP.split('/');var mIdx=mN.indexOf(n(partes[0]));var ano=parseInt(partes[1])||new Date().getFullYear();
-  if(mIdx<0)return;
-  var nDias=new Date(ano,mIdx+1,0).getDate();var hoje=new Date();
-  var ult=(hoje.getMonth()===mIdx&&hoje.getFullYear()===ano)?hoje.getDate():nDias;
+  var partes=mesP.split('/');var refMIdx=mN.indexOf(n(partes[0]));var ano=parseInt(partes[1])||new Date().getFullYear();
+  if(refMIdx<0)return;
+  /* Mes de referencia = refMIdx. Vencimento = refMIdx+1. Prazo ate dia 15 de refMIdx+2. */
+  var mesVenc=refMIdx+1;var anoVenc=ano;if(mesVenc>11){mesVenc-=12;anoVenc++;}
+  var mesPrazo=mesVenc+1;var anoPrazo=anoVenc;if(mesPrazo>11){mesPrazo-=12;anoPrazo++;}
+  /* Gerar todos os dias: mes ref completo + mes venc completo + dia 1-15 do mes prazo */
+  var allDays=[];
+  var diasRef=new Date(ano,refMIdx+1,0).getDate();
+  for(var d=1;d<=diasRef;d++)allDays.push(new Date(ano,refMIdx,d));
+  var diasVenc=new Date(anoVenc,mesVenc+1,0).getDate();
+  for(var d=1;d<=diasVenc;d++)allDays.push(new Date(anoVenc,mesVenc,d));
+  for(var d=1;d<=15;d++)allDays.push(new Date(anoPrazo,mesPrazo,d));
   var labels=[],data=[],bgC=[];var DI=['D','S','T','Q','Q','S','S'];var dw=[];
-  for(var d=1;d<=nDias;d++){var k=String(d).padStart(2,'0')+'/'+String(mIdx+1).padStart(2,'0');labels.push(d);data.push(porDia[k]||0);bgC.push(d<=ult?cor+'CC':'#E4E4E4');var dd=new Date(ano,mIdx,d).getDay();dw.push({i:DI[dd],w:dd===0||dd===6});}
+  var mNomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var corRef='#93ADFC99';var corVenc=cor+'CC';var corPrazo='#f39c1299';
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var prevMonth=-1;
+  for(var i=0;i<allDays.length;i++){
+    var dt=allDays[i];
+    var dk=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+    var val=porDia[dk]||0;
+    /* Label: mostra nome do mes no dia 1, senao so o dia */
+    var lbl=dt.getDate()===1||i===0?mNomes[dt.getMonth()]+' '+dt.getDate():String(dt.getDate());
+    labels.push(lbl);data.push(val);
+    /* cor por zona */
+    var c2;
+    if(dt.getMonth()===refMIdx&&dt.getFullYear()===ano)c2=corRef;
+    else if(dt.getMonth()===mesVenc&&dt.getFullYear()===anoVenc)c2=corVenc;
+    else c2=corPrazo;
+    if(dt>hoje)c2='#E4E4E4';
+    bgC.push(c2);
+    var dow=dt.getDay();dw.push({i:DI[dow],w:dow===0||dow===6});
+    prevMonth=dt.getMonth();
+  }
   var ctx=document.getElementById(id);if(!ctx)return;
-  registerChart(key,new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Pagamentos',data:data,backgroundColor:bgC,borderRadius:3,borderSkipped:false}]},plugins:[{id:'bL',afterDatasetsDraw:function(ch){var c2=ch.ctx;c2.save();ch.data.datasets.forEach(function(ds,di){var m=ch.getDatasetMeta(di);m.data.forEach(function(bar,i){var v=ds.data[i];if(v>0){c2.font='700 9px Inter,sans-serif';c2.textAlign='center';c2.textBaseline='middle';var y=bar.y,h=bar.base-bar.y;if(h>14){c2.fillStyle='#fff';c2.fillText(v,bar.x,y+h/2);}else{c2.fillStyle='#5353E9';c2.fillText(v,bar.x,y-8);}}});});c2.restore();}},{id:'dL',afterDraw:function(ch){var c2=ch.ctx;var xA=ch.scales.x;c2.save();c2.textAlign='center';c2.textBaseline='top';for(var i=0;i<dw.length;i++){var xp=xA.getPixelForTick(i);if(xp===undefined)continue;c2.font=dw[i].w?'600 8px Inter':'400 8px Inter';c2.fillStyle='#000';c2.fillText(dw[i].i,xp,xA.bottom+2);}c2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){var dd=parseInt(it[0].label);var dn=['Dom','Seg','Ter','Qua','Qui','Sex','S\u00E1b'];return dn[new Date(ano,mIdx,dd).getDay()]+', dia '+dd;},label:function(it){return it.raw+' pagamento'+(it.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}},layout:{padding:{top:16,bottom:14}}}}));
+  registerChart(key,new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Pagamentos',data:data,backgroundColor:bgC,borderRadius:2,borderSkipped:false,barPercentage:0.9,categoryPercentage:0.95}]},plugins:[{id:'bL',afterDatasetsDraw:function(ch){var c2=ch.ctx;c2.save();ch.data.datasets.forEach(function(ds,di){var m=ch.getDatasetMeta(di);m.data.forEach(function(bar,i){var v=ds.data[i];if(v>0){c2.font='700 8px Inter,sans-serif';c2.textAlign='center';var y=bar.y,h=bar.base-bar.y;if(h>12){c2.fillStyle='#fff';c2.fillText(v,bar.x,y+h/2);}else{c2.fillStyle='#5353E9';c2.fillText(v,bar.x,y-7);}}});});c2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){var idx=it[0].dataIndex;var dt=allDays[idx];var dn=['Dom','Seg','Ter','Qua','Qui','Sex','S\u00E1b'];return dn[dt.getDay()]+', '+dt.getDate()+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();},label:function(it){return it.raw+' pagamento'+(it.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:7},maxRotation:0,autoSkip:true,maxTicksLimit:30}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9}},beginAtZero:true}},layout:{padding:{top:14,bottom:4}}}}));
 }
 
 function rendTiming(id,t,total,key){
   var cv=document.getElementById(id);if(!cv||!total)return;
-  var labels=['Antes do\nvencimento','No m\u00EAs do\nvencimento','At\u00E9 dia 15\ndo m\u00EAs seguinte','Ap\u00F3s dia 15\n(atrasado)'];
-  var vals=[t.antesVenc,t.noMesVenc,t.mesSegAte15,t.atrasado];
+  var labels=['Antes do\nvencimento','No dia','At\u00E9 5 dias\ndepois','At\u00E9 10 dias\ndepois','At\u00E9 20 dias\ndepois','At\u00E9 30 dias\ndepois','Mais de\n30 dias'];
+  var vals=[t.antes,t.noDia,t.ate5,t.ate10,t.ate20,t.ate30,t.mais30];
   var pcts=vals.map(function(v){return total>0?parseFloat((v/total*100).toFixed(1)):0;});
-  var cores=['#2ecc71','#27ae60','#f39c12','#E74C3C'];
+  var cores=['#2ecc71','#27ae60','#3498db','#f39c12','#e67e22','#e74c3c','#8e44ad'];
   registerChart(key,new Chart(cv,{type:'bar',data:{labels:labels,datasets:[{label:'%',data:pcts,backgroundColor:cores,borderRadius:4,borderSkipped:false}]},plugins:[{id:'pL',afterDatasetsDraw:function(ch){var c2=ch.ctx;c2.save();ch.data.datasets.forEach(function(ds,di){var m=ch.getDatasetMeta(di);m.data.forEach(function(bar,i){var v=ds.data[i];if(v>0){c2.font='700 11px Inter,sans-serif';c2.textAlign='center';c2.fillStyle='#333';c2.fillText(v.toFixed(1)+'%',bar.x,bar.y-10);c2.font='400 9px Inter,sans-serif';c2.fillStyle='#888';c2.fillText('('+fN(vals[i])+')',bar.x,bar.y-22);}});});c2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return it.raw+'% ('+fN(vals[it.dataIndex])+' boletos)';}}}},scales:{x:{grid:{display:false},ticks:{color:'#555',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},callback:function(v){return v+'%';}},beginAtZero:true}},layout:{padding:{top:30}}}}));
 }
 
@@ -381,8 +414,8 @@ function render(d){
       '<div class="card"><div class="ctit">Frota &mdash; Tipo de ve\u00EDculo</div><div style="display:flex;gap:16px;margin-bottom:12px"><div class="eqi" style="background:#EEEEFF;flex:1"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Carros</span><div style="text-align:right"><div class="eqv" style="color:var(--roxo)">'+fN(d.carros)+'</div><div class="eqval" style="color:var(--roxo)">'+cPct+'%</div></div></div><div class="eqi" style="background:#FDE8FD;flex:1"><span class="eqdot" style="background:#8B1A90"></span><span class="eqnom" style="color:#8B1A90">Motos</span><div style="text-align:right"><div class="eqv" style="color:#8B1A90">'+fN(d.motos)+'</div><div class="eqval" style="color:#8B1A90">'+mPct+'%</div></div></div></div>'+(d.caminhoes>0?'<div class="eqi" style="background:#F6FBDA"><span class="eqdot" style="background:#5C6200"></span><span class="eqnom" style="color:#5C6200">Caminh\u00F5es</span><div class="eqv" style="color:#5C6200">'+fN(d.caminhoes)+'</div></div>':'')+'</div>'+
       '<div class="card"><div class="ctit">Carros &mdash; Tipo de uso</div><div class="eqi" style="background:#E0FDF6;margin-bottom:6px"><span class="eqdot" style="background:#0A6B54"></span><span class="eqnom" style="color:#0A6B54">Particular</span><div class="eqv" style="color:#0A6B54">'+fN(d.usoP)+'</div></div><div class="eqi" style="background:#FFF4E0;margin-bottom:6px"><span class="eqdot" style="background:#C08A00"></span><span class="eqnom" style="color:#C08A00">T\u00E1xi</span><div class="eqv" style="color:#C08A00">'+fN(d.usoT)+'</div></div><div class="eqi" style="background:#EEEEFF"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Uso Profissional</span><div class="eqv" style="color:var(--roxo)">'+fN(d.usoPr)+'</div></div></div>'+
     '</div>'+
-    '<div class="card" style="margin-bottom:12px"><div class="ctit">Pagamentos por dia &mdash; '+esc(displayMes)+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPgDia)+' pagamentos)</span></div><div class="grafico-diario-wrap"><canvas id="gcDiario"></canvas></div></div>'+
-    '<div class="card" style="margin-bottom:12px"><div class="ctit">Prazo de pagamento vs vencimento'+(d.timingTotal>0?' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(d.timingTotal)+' boletos analisados)</span>':'')+'</div><div style="font-size:11px;color:var(--sub);margin-bottom:8px">Vencimentos: dias 1, 5, 10, 15, 20, 25, 30 &mdash; Prazo m\u00E1ximo: dia 15 do m\u00EAs seguinte ao vencimento</div><div class="timing-wrap"><canvas id="gcTiming"></canvas></div></div>'+
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Pagamentos por dia &mdash; '+esc(displayMes)+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPgDia)+' pagamentos)</span></div><div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;font-weight:600;flex-wrap:wrap"><span style="color:#93ADFC">&#9632; M\u00EAs da refer\u00EAncia</span><span style="color:#5353E9">&#9632; M\u00EAs do vencimento</span><span style="color:#f39c12">&#9632; Prazo (at\u00E9 dia 15)</span><span style="color:#E4E4E4">&#9632; Futuro</span></div><div class="grafico-diario-wrap" style="height:220px"><canvas id="gcDiario"></canvas></div></div>'+
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Prazo de pagamento vs vencimento'+(d.timingTotal>0?' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(d.timingTotal)+' boletos analisados)</span>':'')+'</div><div class="timing-wrap"><canvas id="gcTiming"></canvas></div></div>'+
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Ve\u00EDculos por estado</div>'+estHtml+'</div>'+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">&#x2B07; Salvar espelho do dia</button>';
 
