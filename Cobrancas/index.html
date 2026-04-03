@@ -365,6 +365,12 @@ function rendStatusPizza(id,porStatus,key){
   registerChart(key,new Chart(cv,{type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:bgC,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},plugins:[{id:'cL',afterDraw:function(ch){var c2=ch.ctx;c2.save();var cx=(ch.chartArea.left+ch.chartArea.right)/2;var cy=(ch.chartArea.top+ch.chartArea.bottom)/2;c2.textAlign='center';c2.textBaseline='middle';c2.font='800 20px Inter';c2.fillStyle='#210B4E';c2.fillText(fN(total),cx,cy-5);c2.font='400 9px Inter';c2.fillStyle='#7B7B9A';c2.fillText('boletos',cx,cy+11);c2.restore();}}],options:{responsive:true,maintainAspectRatio:true,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:10,usePointStyle:true,pointStyle:'circle',font:{size:10,family:'Inter'},color:'#555'}},tooltip:{backgroundColor:'#210B4E',cornerRadius:8,callbacks:{label:function(it){var pct=total>0?(it.raw/total*100).toFixed(1):'0';return ' '+it.label+': '+fN(it.raw)+' ('+pct+'%)';}}}}}}));
 }
 
+function rendRegionalPizza(id,interno,externo,key){
+  var cv=document.getElementById(id);if(!cv)return;
+  var total=interno+externo;if(!total)return;
+  registerChart(key,new Chart(cv,{type:'doughnut',data:{labels:['Interno','Externo'],datasets:[{data:[interno,externo],backgroundColor:['#5353E9','#0A6B54'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},plugins:[{id:'cL',afterDraw:function(ch){var c2=ch.ctx;c2.save();var cx=(ch.chartArea.left+ch.chartArea.right)/2;var cy=(ch.chartArea.top+ch.chartArea.bottom)/2;c2.textAlign='center';c2.textBaseline='middle';c2.font='800 16px Inter';c2.fillStyle='#210B4E';c2.fillText(fN(total),cx,cy-4);c2.font='400 8px Inter';c2.fillStyle='#7B7B9A';c2.fillText('boletos',cx,cy+9);c2.restore();}}],options:{responsive:true,maintainAspectRatio:true,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:10,usePointStyle:true,pointStyle:'circle',font:{size:10,family:'Inter'},color:'#555'}},tooltip:{backgroundColor:'#210B4E',cornerRadius:8,callbacks:{label:function(it){var pct=total>0?(it.raw/total*100).toFixed(1):'0';return ' '+it.label+': '+fN(it.raw)+' ('+pct+'%)';}}}}}}));
+}
+
 /* ─── Render ─── */
 function render(d){
   destroyAllCharts();
@@ -384,7 +390,7 @@ function render(d){
     refHtml+
     '<div class="krow">'+
       '<div class="kpi kd"><div class="klbl">Boletos gerados</div><div class="kval">'+fR(d.totBol)+'</div><div class="ksub">'+fN(d.total)+' boletos</div><div class="kdeco">&#x1F4CB;</div></div>'+
-      '<div class="kpi kr"><div class="klbl">Valor pago</div><div class="kval">'+fR(d.totPago)+'</div><div class="ksub">Pagamentos confirmados</div><div class="kdeco">&#x1F4B0;</div></div>'+
+      '<div class="kpi kr"><div class="klbl">Valor pago</div><div class="kval">'+fR(d.totPago)+'</div><div class="ksub">Ticket m\u00E9dio: '+fR(d.total>0?d.totBol/d.total:0)+'</div><div class="kdeco">&#x1F4B0;</div></div>'+
       '<div class="kpi km"><div class="klbl">Valor em aberto</div><div class="kval">'+fR(d.totAberto)+'</div><div class="ksub">Vencidos + \u00C0 vencer</div><div class="kdeco">&#x23F3;</div></div>'+
       '<div class="kpi kw"><div class="klbl">Segurados</div><div class="kval">'+fN(d.qtdSeg)+'</div><div class="ksub">Contratos \u00FAnicos</div><div class="kdeco">&#x1F464;</div></div>'+
     '</div>'+
@@ -412,18 +418,8 @@ function render(d){
     '</div>'+
     '<div class="card" style="margin-bottom:14px"><div class="ctit">Pagamentos por dia &mdash; '+esc(displayMes)+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPgDia)+' pagamentos)</span></div><div class="chart-legend"><span style="--c:#93ADFC" class="lg-ref">M\u00EAs da refer\u00EAncia</span><span style="--c:#5353E9" class="lg-venc">M\u00EAs do vencimento</span><span style="--c:#f39c12" class="lg-prazo">Prazo (at\u00E9 dia 15)</span></div><div class="grafico-diario-wrap"><canvas id="gcDiario"></canvas></div></div>'+
     '<div class="card" style="margin-bottom:14px"><div class="ctit">Prazo de pagamento vs vencimento'+(d.timingTotal>0?' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(d.timingTotal)+' boletos)</span>':'')+'</div><div class="timing-wrap"><canvas id="gcTiming"></canvas></div></div>'+
-    /* Regional: Interno vs Externo */
-    '<div class="g2 stretch">'+
-      '<div class="card"><div class="ctit">Regional &mdash; Interno vs Externo</div>'+
-        '<div style="display:flex;gap:12px;margin-bottom:12px">'+
-          '<div class="eqi" style="background:rgba(83,83,233,.08);flex:1"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Interno</span><div class="eqv" style="color:var(--roxo)">'+fN(d.regInterno)+'</div></div>'+
-          '<div class="eqi" style="background:rgba(10,107,84,.08);flex:1"><span class="eqdot" style="background:#0A6B54"></span><span class="eqnom" style="color:#0A6B54">Externo</span><div class="eqv" style="color:#0A6B54">'+fN(d.regExterno)+'</div></div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="card"><div class="ctit">Itens por regional</div>'+
-        (function(){var rh='';d.porRegional.slice(0,15).forEach(function(e){var maxR=d.porRegional[0][1]||1;var pct=Math.round(e[1]/maxR*100);var cor=ehInterno(e[0])?'var(--roxo)':'#0A6B54';rh+='<div class="bar-row"><div class="bar-label" style="font-size:10px;min-width:auto;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:'+cor+'">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div><div class="bar-count">'+fN(e[1])+'</div></div>';});return rh;})()+
-      '</div>'+
-    '</div>'+
+    /* Regional: Interno vs Externo — pizza */
+    '<div class="card" style="margin-bottom:14px"><div class="ctit">Regional &mdash; Interno vs Externo</div><div style="display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap"><div style="width:180px"><canvas id="gcRegional"></canvas></div></div></div>'+
     '<div class="g2 stretch">'+
       '<div class="card"><div class="ctit">Descontos concedidos</div><div style="font-size:26px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totDescN)+'</div><div style="font-size:11px;color:var(--sub);margin-bottom:10px">em '+fN(d.cntDescN)+' boletos</div><div style="display:inline-block;background:rgba(83,83,233,.06);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:600;color:var(--roxo)">'+fPct(d.descPctN)+' desconto m\u00E9dio</div></div>'+
       '<div class="desc50-card"><div class="desc50-lbl">Segurados com 50% de desconto</div><div class="desc50-val">'+fN(d.cntDesc50)+' segurados</div><div class="desc50-sub">Desconto total: '+fR(d.totDesc50)+'</div><div class="desc50-sub" style="margin-top:3px">Valor original: '+fR(d.somaOrigDesc50)+'</div></div>'+
@@ -441,6 +437,7 @@ function render(d){
   rendTiming('gcTiming',d.timing,d.timingTotal,'GTIMING');
   rendVencimentos('gcVenc',d.porVencimento,'GVENC');
   rendStatusPizza('gcStatus',d.porStatus,'GSTATUS');
+  rendRegionalPizza('gcRegional',d.regInterno,d.regExterno,'GREG');
 }
 
 function exportarDashboard(){html2canvas(document.body,{scale:1.5,useCORS:true,backgroundColor:'#F4F4F4'}).then(function(c){var a=document.createElement('a');a.download='allsafe-cobrancas-'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.png';a.href=c.toDataURL('image/png');a.click();}).catch(function(e){alert('Erro: '+e.message);});}
