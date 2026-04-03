@@ -390,10 +390,8 @@ function render(d){
     '</div>'+
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">&#x2B07; Salvar espelho do dia</button>';
 
-  /* inject legend colors via CSS */
-  var style=document.createElement('style');
-  style.textContent='.lg-ref::before{background:#93ADFC}.lg-venc::before{background:#5353E9}.lg-prazo::before{background:#f39c12}';
-  document.head.appendChild(style);
+  /* inject legend colors via CSS — only once */
+  if(!document.getElementById('lg-style')){var style=document.createElement('style');style.id='lg-style';style.textContent='.lg-ref::before{background:#93ADFC}.lg-venc::before{background:#5353E9}.lg-prazo::before{background:#f39c12}';document.head.appendChild(style);}
 
   rendGraficoDiario('gcDiario',d.porDia,'GDC',MES);
   rendTiming('gcTiming',d.timing,d.timingTotal,'GTIMING');
