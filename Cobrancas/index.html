@@ -715,4 +715,26 @@ async function atualizar(){
     var cancelados=await canP;
     if(ver!==_renderVersion)return;
     var d=processar(rows, cancelados);
-    rende
+    render(d);
+    var tsEl=document.getElementById('ts');
+    if(tsEl)tsEl.textContent=new Date().toLocaleTimeString('pt-BR');
+  }catch(e){
+    console.error('atualizar:',e);
+    if(ver!==_renderVersion)return;
+    document.getElementById('root').innerHTML='<div class="smsg"><div class="ico">⚠️</div><div class="err">Erro ao carregar dados</div><div>'+esc(e.message)+'</div><button class="btn-sm" style="margin-top:12px;background:var(--dark);color:var(--azul)" onclick="atualizar()">Tentar novamente</button></div>';
+  }
+}
+
+async function init(){
+  MESES=await detectarMeses();
+  MES=MESES[MESES.length-1]||NOMES_MES[new Date().getMonth()]+'/'+new Date().getFullYear();
+  setMesSel();
+  atualizar();
+  _intervaloAtualizar=setInterval(atualizar, 5*60*1000);
+}
+
+init();
+
+</script>
+</body>
+</html>
