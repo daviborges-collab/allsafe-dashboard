@@ -135,14 +135,15 @@ var GIDS_COB = {
   /* 'Maio/2026':   'COLE_O_GID_AQUI', */
 };
 
-/* Referencia do mes e mes de vencimento (com grafia correta)
-   Padrao: ref = mes da aba, venc = proximo mes.
-   O segurado tem ate o dia 15 do mes POSTERIOR ao vencimento pra pagar. */
+/* Referencia do mes, mes de vencimento e prazo maximo (dia 15 do mes seguinte ao vencimento).
+   prazoAte = data limite em que esta referencia e a aba ativa do dash.
+   Ate essa data (inclusive), o dash abre nesta aba. A partir do dia seguinte, passa pra proxima.
+   Regra: ref X -> vencimento X+1 -> prazo ate dia 15 de X+2. */
 var REFS = {
-  'Fevereiro/2026': { ref: 'Fevereiro/2026', venc: 'Mar\u00E7o' },
-  'Marco/2026':     { ref: 'Mar\u00E7o/2026',     venc: 'Abril' }
-  /* 'Abril/2026':  { ref: 'Abril/2026',  venc: 'Maio' }, */
-  /* 'Maio/2026':   { ref: 'Maio/2026',   venc: 'Junho' }, */
+  'Fevereiro/2026': { ref: 'Fevereiro/2026', venc: 'Mar\u00E7o', prazoAte: '2026-04-15' },
+  'Marco/2026':     { ref: 'Mar\u00E7o/2026', venc: 'Abril',     prazoAte: '2026-05-15' }
+  /* 'Abril/2026':  { ref: 'Abril/2026',  venc: 'Maio',  prazoAte: '2026-06-15' }, */
+  /* 'Maio/2026':   { ref: 'Maio/2026',   venc: 'Junho', prazoAte: '2026-07-15' }, */
 };
 
 /* Nomes de exibicao com acentos corretos para o seletor de meses */
@@ -476,9 +477,24 @@ function atualizar(){
   });
 }
 
+/* Determina qual mes deve ser o ativo com base na data de hoje.
+   Regra: o mes ativo e aquele cujo prazoAte >= hoje.
+   Se hoje <= 15/04/2026, aba ativa = Fevereiro/2026 (prazoAte 2026-04-15).
+   Se hoje > 15/04 e <= 15/05, aba ativa = Marco/2026, etc.
+   Se nenhum se aplica (todos vencidos), mostra o ultimo. */
+function mesAtivoPorData(){
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var hojeStr=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+  for(var i=0;i<MESES.length;i++){
+    var r=REFS[MESES[i]];
+    if(r&&r.prazoAte&&hojeStr<=r.prazoAte)return MESES[i];
+  }
+  return MESES[MESES.length-1];
+}
+
 function init(){
   MESES=Object.keys(GIDS_COB);
-  MES=MESES[MESES.length-1]||'Marco/2026';
+  MES=mesAtivoPorData();
   setMesSel();
   atualizar();
   _intervaloAtualizar=setInterval(atualizar,5*60*1000);
