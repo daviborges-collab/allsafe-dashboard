@@ -1668,7 +1668,7 @@ function calcDias(aba){
 
   var todos=diasUtil(ano,mIdx);var dPass=0,dFalt=0;
 
-  if(eMes){dPass=todos.filter(function(d){return d<hojeD;}).length;dFalt=todos.filter(function(d){return d>=hojeD;}).length;}
+  if(eMes){dPass=todos.filter(function(d){return d<=hojeD;}).length;dFalt=todos.filter(function(d){return d>hojeD;}).length;}
 
   else if(hoje>new Date(ano,mIdx+1,0)){dPass=todos.length;}
 
@@ -1748,9 +1748,7 @@ function procExt(rows,aba){
 
   });
 
-  tot=0;totV=0;vendHoje=0;
-
-  ['Joao','Bernardo','Renata','Agger','Robson'].forEach(function(k){tot+=porEq[k].v;totV+=porEq[k].val;vendHoje+=vendHojeEq[k]||0;});
+  /* tot, totV e vendHoje já acumulados no loop acima — não resetar */
 
   var agEst=Object.entries(porEstEq).map(function(e){return[e[0],(e[1]['Agger']||0)];}).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];});
 
