@@ -56,7 +56,6 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 .objcard{background:#0d0d2e;border:1px solid rgba(83,83,233,.25);border-radius:16px;padding:1.25rem;transition:transform .25s,box-shadow .25s}
 .objcard:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(13,13,46,.3)}
 .objtit{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rosa);margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.objtit::before{content:'';font-size:12px}
 .objmain{display:flex;align-items:flex-end;gap:8px;margin-bottom:4px}
 .objval{font-size:36px;font-weight:800;color:var(--limao);line-height:1}
 .objunit{font-size:12px;color:#5a5a9a;margin-bottom:6px}
@@ -72,12 +71,6 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 .eqnom{font-size:13px;font-weight:600;flex:1}
 .eqv{font-size:18px;font-weight:800}
 .eqval{font-size:10px;font-weight:500;opacity:.7;text-align:right}
-.rt{width:100%;border-collapse:collapse;font-size:12px}
-.rt th{text-align:left;padding:5px 8px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;border-bottom:2px solid var(--borda);white-space:nowrap}
-.rt td{padding:7px 8px;border-bottom:1px solid #F0F0F0;vertical-align:middle;transition:background .15s}
-.rt tr:last-child td{border-bottom:none}
-.rt tbody tr:hover td{background:#F5F5FF}
-.tr{text-align:right}.fw{font-weight:700}
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .bar-label{font-size:12px;font-weight:600;min-width:32px;text-align:right}
 .bar-track{flex:1;height:22px;background:#F0F0F4;border-radius:6px;overflow:hidden;position:relative}
@@ -131,7 +124,6 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
   .ts{font-size:9px}
   .kval{font-size:20px!important}
   .card,.velcard,.objcard{padding:1rem}
-  .rt td,.rt th{padding:5px 6px;font-size:11px}
   .grafico-diario-wrap{height:200px}
   .objval{font-size:28px}
   .velat{font-size:20px}
@@ -160,7 +152,7 @@ select.mes-sel:hover{background:rgba(255,255,255,.12)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
-/* Allsafe Cobranças Dashboard v1.0 */
+/* Allsafe Cobranças Dashboard v2.0 — fixed column mapping + cancelados */
 
 /* ─── Helpers ─── */
 function n(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
@@ -261,7 +253,12 @@ function findCol(idx){
   return -1;
 }
 
-/* ─── Parse cobranças CSV ─── */
+/* ─── Parse cobranças CSV ───
+   Headers reais confirmados:
+   Estado, Data de Pagamento, Status, Data de vencimento original,
+   Valor Original, Valor Pago, Id do contrato, Tipo veículo,
+   Tipo de uso veículo, Regional, Consultor, Data Finalização Vistoria
+*/
 function parseCobrancas(txt){
   var linhas=txt.split('\n');
   if(linhas.length<2)return[];
@@ -277,16 +274,17 @@ function parseCobrancas(txt){
   };
 
   var COL={
-    status:fc('classificar boletos','status',0),
-    valorOriginal:fc('valor original','valor original',1),
-    valorPago:fc('valor pago',2),
-    idContrato:fc('id do contrato','id contrato',3),
-    tipoVeiculo:fc('tipo veiculo','tipo veículo',4),
-    tipoUso:fc('tipo de uso veiculo','tipo de uso veículo','tipo de uso',5),
-    estado:fc('estado','uf',6),
-    dataPagamento:fc('data de pagamento','data pagamento',7),
-    dataVencimento:fc('data de vencimento original','data vencimento',8),
-    regional:fc('regional / consultor','regional','consultor',-1),
+    estado:        fc('estado','uf',0),
+    dataPagamento: fc('data de pagamento','data pagamento',1),
+    status:        fc('status','classificar boletos',2),
+    dataVencimento:fc('data de vencimento original','data vencimento',3),
+    valorOriginal: fc('valor original',4),
+    valorPago:     fc('valor pago',5),
+    idContrato:    fc('id do contrato','id contrato',6),
+    tipoVeiculo:   fc('tipo veiculo','tipo veículo',7),
+    tipoUso:       fc('tipo de uso veiculo','tipo de uso veículo','tipo de uso',8),
+    regional:      fc('regional',9),
+    consultor:     fc('consultor',10),
   };
 
   var rows=[];
@@ -294,38 +292,41 @@ function parseCobrancas(txt){
     if(!linhas[li].trim())continue;
     var c=parseCSVLine(linhas[li]);
     if(c.length<3)continue;
-    var status=(c[COL.status]||'').trim();
+    var status=(COL.status>=0&&COL.status<c.length)?(c[COL.status]||'').trim():'';
     if(!status)continue;
     rows.push({
       status:status,
-      valorOriginal:pv(c[COL.valorOriginal]),
-      valorPago:pv(c[COL.valorPago]),
-      idContrato:(c[COL.idContrato]||'').trim(),
+      valorOriginal:COL.valorOriginal>=0?pv(c[COL.valorOriginal]):0,
+      valorPago:COL.valorPago>=0?pv(c[COL.valorPago]):0,
+      idContrato:COL.idContrato>=0?(c[COL.idContrato]||'').trim():'',
       tipoVeiculo:COL.tipoVeiculo>=0?(c[COL.tipoVeiculo]||'').trim().toUpperCase():'',
       tipoUso:COL.tipoUso>=0?(c[COL.tipoUso]||'').trim():'',
       estado:COL.estado>=0?(c[COL.estado]||'').trim().toUpperCase():'',
       dataPagamento:COL.dataPagamento>=0?(c[COL.dataPagamento]||'').trim():'',
       dataVencimento:COL.dataVencimento>=0?(c[COL.dataVencimento]||'').trim():'',
       regional:COL.regional>=0?(c[COL.regional]||'').trim():'',
+      consultor:COL.consultor>=0?(c[COL.consultor]||'').trim():'',
     });
   }
   return rows;
 }
 
-/* ─── Parse cancelados CSV ─── */
+/* ─── Parse cancelados CSV — inferir colunas automaticamente ─── */
 function parseCancelados(txt){
   var linhas=txt.split('\n');
   if(linhas.length<2)return[];
   var cols=parseCSVLine(linhas[0]);
   var idx={};
   cols.forEach(function(c,i){idx[n(c)]=i;});
-
   var iId=findCol(idx,'id do contrato','id contrato','contrato','id');
   var rows=[];
   for(var li=1;li<linhas.length;li++){
     if(!linhas[li].trim())continue;
     var c=parseCSVLine(linhas[li]);
     if(c.length<1)continue;
+    /* se tem pelo menos 1 campo preenchido, conta como cancelado */
+    var algum=c.some(function(v){return v.trim();});
+    if(!algum)continue;
     rows.push({
       idContrato:iId>=0?(c[iId]||'').trim():'row_'+li,
       raw:c,
@@ -350,27 +351,46 @@ function parseDataField(dataStr){
   return{dStr:'',dia:null};
 }
 
-/* ─── Fetch rows ─── */
+/* ─── Fetch cobranças rows ─── */
 async function fetchCobrancasRows(aba){
   var baseUrl='https://docs.google.com/spreadsheets/d/'+SHEET_COBRANCAS+'/export?format=csv';
   var gid=GIDS_COB[aba];
-  var url=gid?baseUrl+'&gid='+gid:baseUrl+'&sheet='+encodeURIComponent(aba);
-  try{
-    var txt=await fetchCachedCSV(url);
-    if(!txt||!txt.includes(','))return[];
-    return parseCobrancas(txt);
-  }catch(e){console.warn('fetchCobrancasRows:',e);throw e;}
+  var urls=[];
+  if(gid)urls.push(baseUrl+'&gid='+gid);
+  urls.push(baseUrl+'&sheet='+encodeURIComponent(aba));
+  var lastErr=null;
+  for(var i=0;i<urls.length;i++){
+    try{
+      var txt=await fetchCachedCSV(urls[i]);
+      if(!txt||!txt.includes(','))continue;
+      var rows=parseCobrancas(txt);
+      if(rows.length>0)return rows;
+    }catch(e){lastErr=e;continue;}
+  }
+  if(lastErr)throw lastErr;
+  return[];
 }
 
+/* ─── Fetch cancelados rows — com fallback silencioso ─── */
 async function fetchCanceladosRows(aba){
   var baseUrl='https://docs.google.com/spreadsheets/d/'+SHEET_CANCELADOS+'/export?format=csv';
   var gid=GIDS_CAN[aba];
-  var url=gid?baseUrl+'&gid='+gid:baseUrl+'&sheet='+encodeURIComponent(aba);
-  try{
-    var txt=await fetchCachedCSV(url);
-    if(!txt||!txt.includes(','))return[];
-    return parseCancelados(txt);
-  }catch(e){console.warn('fetchCanceladosRows:',e);return[];}
+  var urls=[];
+  if(gid)urls.push(baseUrl+'&gid='+gid);
+  urls.push(baseUrl+'&sheet='+encodeURIComponent(aba));
+  for(var i=0;i<urls.length;i++){
+    try{
+      var txt=await fetchCachedCSV(urls[i]);
+      if(!txt||!txt.includes(','))continue;
+      var rows=parseCancelados(txt);
+      return rows;
+    }catch(e){
+      console.warn('fetchCancelados tentativa '+(i+1)+':', e.message);
+      continue;
+    }
+  }
+  console.warn('fetchCancelados: planilha inacessível, retornando 0 cancelados');
+  return[];
 }
 
 /* ─── Detectar meses disponíveis ─── */
@@ -402,15 +422,13 @@ async function detectarMeses(){
 }
 
 /* ─── Status classification ─── */
-var ST_SUCESSO=['sucesso','baixado com pendencia','baixado com pendência','baixado com duplicidade'];
-var ST_ABERTO=['vencido','a vencer','à vencer'];
-var ST_VENCIDO=['vencido'];
-var ST_A_VENCER=['a vencer','à vencer'];
-
-function isStatusPago(s){return ST_SUCESSO.some(function(k){return n(s)===k||n(s).includes(k);});}
-function isStatusVencido(s){return ST_VENCIDO.some(function(k){return n(s)===k||n(s).includes(k);});}
-function isStatusAberto(s){return ST_ABERTO.some(function(k){return n(s)===k||n(s).includes(k);});}
-function isStatusAVencer(s){return ST_A_VENCER.some(function(k){return n(s)===k||n(s).includes(k);});}
+function isStatusPago(s){
+  var ns=n(s);
+  return ns==='sucesso'||ns.includes('baixado com pend')||ns.includes('baixado com duplic');
+}
+function isStatusVencido(s){return n(s)==='vencido';}
+function isStatusAberto(s){var ns=n(s);return ns==='vencido'||ns==='a vencer'||ns==='à vencer'||ns.includes('a vencer');}
+function isStatusAVencer(s){var ns=n(s);return ns==='a vencer'||ns==='à vencer'||ns.includes('a vencer');}
 
 /* ─── Process data ─── */
 function processar(rows, cancelados){
@@ -428,13 +446,12 @@ function processar(rows, cancelados){
     totalBoletoGerado+=r.valorOriginal;
     if(r.idContrato)idsContrato.add(r.idContrato);
 
-    var ns=n(r.status);
     porStatus[r.status]=(porStatus[r.status]||0)+1;
 
     if(isStatusPago(r.status)){
       totalPago+=r.valorPago;
       var desc=r.valorOriginal-r.valorPago;
-      if(desc>0){totalDescontoVal+=desc;somaOrigDesconto+=r.valorOriginal;countDesconto++;}
+      if(desc>0.01){totalDescontoVal+=desc;somaOrigDesconto+=r.valorOriginal;countDesconto++;}
     }
 
     if(isStatusAberto(r.status)){
@@ -445,20 +462,19 @@ function processar(rows, cancelados){
       countVencido++;
     }
 
-    /* Pagamentos por dia */
+    /* Pagamentos por dia — usa Data de Pagamento */
     if(isStatusPago(r.status)&&r.dataPagamento){
       var parsed=parseDataField(r.dataPagamento);
       if(parsed.dia)porDia[parsed.dia]=(porDia[parsed.dia]||0)+1;
     }
 
     /* Frota */
-    var tv=r.tipoVeiculo.toUpperCase();
-    if(tv.includes('CARRO')||tv.includes('AUTO'))carros++;
-    else if(tv.includes('MOTO'))motos++;
+    var tv=r.tipoVeiculo;
+    if(tv.includes('MOTO'))motos++;
     else if(tv.includes('CAMINHA')||tv.includes('CAMINHAO')||tv.includes('CAMINHÃO'))caminhoes++;
-    else if(tv)carros++; /* default to carro if has value */
+    else if(tv.includes('CARRO')||tv.includes('AUTO')||tv)carros++;
 
-    /* Uso veículo */
+    /* Uso veículo — apenas para carros */
     var tu=n(r.tipoUso);
     if(tu.includes('taxi'))usoTaxi++;
     else if(tu.includes('profiss')||tu.includes('aplic'))usoProfissional++;
@@ -472,12 +488,14 @@ function processar(rows, cancelados){
 
   var qtdSegurados=idsContrato.size;
   var totalCancelados=cancelados.length;
+
+  /* Inadimplência = vencidos / total contratos */
   var inadimplencia=totalContratos>0?(countVencido/totalContratos)*100:0;
+
+  /* Churn = (vencidos + cancelados) / total contratos */
   var churn=totalContratos>0?((countVencido+totalCancelados)/totalContratos)*100:0;
 
   /* Meta churn 3%: quantos boletos vencidos precisam ser pagos? */
-  /* churn_target = (vencidos_restantes + cancelados) / total <= 0.03 */
-  /* vencidos_restantes <= 0.03 * total - cancelados */
   var metaChurn=3;
   var vencidosMaxPermitidos=Math.floor(metaChurn/100*totalContratos)-totalCancelados;
   if(vencidosMaxPermitidos<0)vencidosMaxPermitidos=0;
@@ -496,6 +514,7 @@ function processar(rows, cancelados){
     descontoPctMedio:descontoPctMedio,
     countDesconto:countDesconto,
     totalCancelados:totalCancelados,
+    totalCanceladosErr:cancelados._fetchFailed||false,
     countVencido:countVencido,
     totalContratos:totalContratos,
     inadimplencia:inadimplencia,
@@ -542,16 +561,16 @@ function rendGraficoDiario(canvasId, porDia, cor, chartKey, mesParam){
   registerChart(chartKey,new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Pagamentos',data:data,backgroundColor:bgColors,borderRadius:3,borderSkipped:false}]},plugins:[{id:'barLabels',afterDatasetsDraw:function(chart){var ctx2=chart.ctx;ctx2.save();chart.data.datasets.forEach(function(ds,di){var meta=chart.getDatasetMeta(di);meta.data.forEach(function(bar,i){var val=ds.data[i];if(val>0){ctx2.font='700 9px Inter,sans-serif';ctx2.textAlign='center';ctx2.textBaseline='middle';var y=bar.y,h=bar.base-bar.y;if(h>14){ctx2.fillStyle='#fff';ctx2.fillText(val,bar.x,y+h/2);}else{ctx2.fillStyle='#5353E9';ctx2.fillText(val,bar.x,y-8);}}});});ctx2.restore();}},{id:'dowLabels',afterDraw:function(chart){var c2=chart.ctx;var xA=chart.scales.x;c2.save();c2.textAlign='center';c2.textBaseline='top';for(var di=0;di<daysOfWeek.length;di++){var xp=xA.getPixelForTick(di);if(xp===undefined)continue;var dw=daysOfWeek[di];c2.font=dw.w?'600 8px Inter,sans-serif':'400 8px Inter,sans-serif';c2.fillStyle='#000';c2.fillText(dw.i,xp,xA.bottom+2);}c2.restore();}}],options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(i){var dd=parseInt(i[0].label);var dowN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];var dw2=new Date(ano,mIdx,dd).getDay();return dowN[dw2]+', dia '+dd+' — '+partes[0];},label:function(i){return i.raw+' pagamento'+(i.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},ticks:{color:'#9090AA',font:{size:9}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#9090AA',font:{size:9},stepSize:1},beginAtZero:true}},layout:{padding:{top:16,bottom:14}}}}));
 }
 
-/* ─── Render ─── */
+/* ─── Render principal ─── */
 function render(d){
   destroyAllCharts();
 
   /* Status breakdown */
   var stHtml='';
   var stEntries=Object.entries(d.porStatus).sort(function(a,b){return b[1]-a[1];});
+  var maxSt=stEntries.length>0?stEntries[0][1]:1;
   stEntries.forEach(function(e){
-    var maxCount=stEntries[0][1]||1;
-    var pct=Math.round(e[1]/maxCount*100);
+    var pct=Math.round(e[1]/maxSt*100);
     var cor=isStatusPago(e[0])?'#2ecc71':isStatusVencido(e[0])?'#E74C3C':isStatusAVencer(e[0])?'#f39c12':'#7B7B9A';
     stHtml+='<div class="bar-row"><div class="bar-label" style="color:'+cor+'">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div><div class="bar-count">'+fN(e[1])+'</div></div>';
   });
@@ -564,7 +583,7 @@ function render(d){
     estHtml+='<div class="bar-row"><div class="bar-label">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--roxo)"></div></div><div class="bar-count">'+fN(e[1])+'</div></div>';
   });
 
-  /* Churn visual */
+  /* Cores churn / inadimplência */
   var churnCor=d.churn<=3?'#2ecc71':d.churn<=5?'#f39c12':'#E74C3C';
   var inadCor=d.inadimplencia<=3?'#2ecc71':d.inadimplencia<=5?'#f39c12':'#E74C3C';
 
@@ -572,6 +591,14 @@ function render(d){
   var totalFrota=d.carros+d.motos+d.caminhoes;
   var frotaCarroPct=totalFrota>0?Math.round(d.carros/totalFrota*100):0;
   var frotaMotoPct=totalFrota>0?Math.round(d.motos/totalFrota*100):0;
+
+  /* Cancelados label */
+  var canceladoLabel=d.totalCanceladosErr
+    ?'<div style="font-size:12px;color:#f39c12;margin-top:4px">⚠ Planilha inacessível</div>'
+    :'<div style="font-size:12px;color:var(--sub)">contratos cancelados</div>';
+
+  /* Quantos pagamentos já registrados no gráfico */
+  var totalPagDia=Object.values(d.porDia).reduce(function(s,v){return s+v;},0);
 
   document.getElementById('root').innerHTML=
 
@@ -583,7 +610,7 @@ function render(d){
       '<div class="kpi kw"><div class="klbl">Segurados</div><div class="kval">'+fN(d.qtdSegurados)+'</div><div class="ksub">Contratos únicos</div><div class="kdeco">👤</div></div>'+
     '</div>'+
 
-    /* Bloco 2 — Descontos + Cancelados */
+    /* Bloco 2 — Descontos + Cancelados + Status */
     '<div class="g3">'+
       '<div class="card"><div class="ctit">Descontos concedidos</div>'+
         '<div style="font-size:28px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totalDescontoVal)+'</div>'+
@@ -593,13 +620,13 @@ function render(d){
 
       '<div class="card"><div class="ctit">Cancelados no mês</div>'+
         '<div style="font-size:42px;font-weight:800;color:#E74C3C;margin-bottom:4px">'+fN(d.totalCancelados)+'</div>'+
-        '<div style="font-size:12px;color:var(--sub)">contratos cancelados</div>'+
+        canceladoLabel+
       '</div>'+
 
       '<div class="card"><div class="ctit">Status dos boletos</div>'+stHtml+'</div>'+
     '</div>'+
 
-    /* Bloco 4 — Inadimplência e Churn */
+    /* Bloco 3 — Inadimplência e Churn */
     '<div class="g2">'+
       '<div class="velcard"><div class="veltit">Churn</div>'+
         '<canvas id="gcChurn" width="200" height="110"></canvas>'+
@@ -622,7 +649,7 @@ function render(d){
       '</div>'+
     '</div>'+
 
-    /* Bloco 5 — Frota */
+    /* Bloco 4 — Frota */
     '<div class="g2">'+
       '<div class="card"><div class="ctit">Frota — Tipo de veículo</div>'+
         '<div style="display:flex;gap:16px;margin-bottom:12px">'+
@@ -640,9 +667,9 @@ function render(d){
     '</div>'+
 
     /* Gráfico diário */
-    '<div class="card" style="margin-bottom:12px"><div class="ctit">Pagamentos por dia — '+MES+'</div><div class="grafico-diario-wrap"><canvas id="gcDiario"></canvas></div></div>'+
+    '<div class="card" style="margin-bottom:12px"><div class="ctit">Pagamentos por dia — '+MES+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPagDia)+' pagamentos)</span></div><div class="grafico-diario-wrap"><canvas id="gcDiario"></canvas></div></div>'+
 
-    /* Bloco 6 — Veículos por estado */
+    /* Bloco 5 — Veículos por estado */
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Veículos por estado</div>'+estHtml+'</div>'+
 
     '<button class="btn-salvar-rodape" onclick="exportarDashboard()">⬇ Salvar espelho do dia</button>';
@@ -668,8 +695,6 @@ function trocarMes(val){
   atualizar();
 }
 
-function setView(){}/* no toggle needed */
-
 function setMesSel(){
   var sel=document.getElementById('mes-sel');
   sel.innerHTML='';
@@ -684,30 +709,10 @@ function setMesSel(){
 async function atualizar(){
   var ver=++_renderVersion;
   try{
-    var rows=await fetchCobrancasRows(MES);
-    var cancelados=await fetchCanceladosRows(MES);
+    var rowsP=fetchCobrancasRows(MES);
+    var canP=fetchCanceladosRows(MES);
+    var rows=await rowsP;
+    var cancelados=await canP;
     if(ver!==_renderVersion)return;
     var d=processar(rows, cancelados);
-    render(d);
-    var tsEl=document.getElementById('ts');
-    if(tsEl)tsEl.textContent=new Date().toLocaleTimeString('pt-BR');
-  }catch(e){
-    console.error('atualizar:',e);
-    if(ver!==_renderVersion)return;
-    document.getElementById('root').innerHTML='<div class="smsg"><div class="ico">⚠️</div><div class="err">Erro ao carregar dados</div><div>'+esc(e.message)+'</div><button class="btn-sm" style="margin-top:12px;background:var(--dark);color:var(--azul)" onclick="atualizar()">Tentar novamente</button></div>';
-  }
-}
-
-async function init(){
-  MESES=await detectarMeses();
-  MES=MESES[MESES.length-1]||NOMES_MES[new Date().getMonth()]+'/'+new Date().getFullYear();
-  setMesSel();
-  atualizar();
-  _intervaloAtualizar=setInterval(atualizar, 5*60*1000);
-}
-
-init();
-
-</script>
-</body>
-</html>
+    rende
