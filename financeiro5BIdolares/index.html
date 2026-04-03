@@ -144,7 +144,8 @@ select.mes-sel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,25
     <h1>Painel de Despesas</h1>
   </div>
   <div class="header-right">
-    <span class="ts" id="ts">Março/2026</span>
+    <select class="mes-sel" id="mes-sel" onchange="trocarMes(this.value)"></select>
+    <span class="ts" id="ts"></span>
   </div>
 </div>
 
@@ -153,8 +154,63 @@ select.mes-sel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,25
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════
-   Allsafe — Painel de Despesas v1.0
+   Allsafe — Painel de Despesas v1.1
    ══════════════════════════════════════════════════════════════ */
+
+// ── CONFIGURAÇÃO: PLANILHA E GIDs ──
+// ID da planilha de despesas
+var SHEET_DESPESAS = '1WcL24rybiaR0J_YAIv3y1evqy8OE1I11TRQwD7NWHVc';
+
+// GIDs de cada aba mensal — preencher conforme forem criadas
+var GIDS_DESPESAS = {
+  'Janeiro/2026':   '',  // TODO: preencher GID
+  'Fevereiro/2026': '',  // TODO: preencher GID
+  'Março/2026':     '',  // TODO: preencher GID (aba atual com dados)
+  'Abril/2026':     '',  // TODO: preencher GID
+  'Maio/2026':      '',  // TODO: preencher GID
+  'Junho/2026':     '',  // TODO: preencher GID
+  'Julho/2026':     '',  // TODO: preencher GID
+  'Agosto/2026':    '',  // TODO: preencher GID
+  'Setembro/2026':  '',  // TODO: preencher GID
+  'Outubro/2026':   '',  // TODO: preencher GID
+  'Novembro/2026':  '',  // TODO: preencher GID
+  'Dezembro/2026':  '',  // TODO: preencher GID
+};
+
+var MESES_DISPONIVEIS = Object.keys(GIDS_DESPESAS);
+var MES_ATUAL = 'Março/2026'; // mês padrão ao abrir
+
+function popularSeletor(){
+  var sel = document.getElementById('mes-sel');
+  sel.innerHTML = '';
+  MESES_DISPONIVEIS.forEach(function(m){
+    var o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    if(m === MES_ATUAL) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function trocarMes(v){
+  MES_ATUAL = v;
+  var gid = GIDS_DESPESAS[v];
+  if(!gid){
+    // Sem GID configurado — mostra aviso
+    document.getElementById('root').innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem;color:var(--sub);gap:12px;font-size:14px;text-align:center">'+
+      '<div style="font-size:32px">📅</div>'+
+      '<div><b>'+v+'</b></div>'+
+      '<div>GID ainda não configurado para este mês.</div>'+
+      '<div style="font-size:12px;color:#999;margin-top:8px">Edite o objeto <code>GIDS_DESPESAS</code> no código-fonte<br>e adicione o GID da aba correspondente na planilha.</div>'+
+      '</div>';
+    document.getElementById('ts').textContent = v;
+    return;
+  }
+  // TODO: quando conectar ao Google Sheets, buscar dados via CSV e reprocessar
+  // Por ora, renderiza os dados estáticos de Março/2026
+  document.getElementById('ts').textContent = v;
+  render();
+}
 
 // ── DATA ──
 var DATA = {
@@ -414,6 +470,8 @@ function expandCard(title,content,id,openByDefault){
 })();
 
 // ── INIT ──
+popularSeletor();
+document.getElementById('ts').textContent = MES_ATUAL;
 render();
 </script>
 </body>
