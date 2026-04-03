@@ -234,9 +234,12 @@ function parseCobrancas(txt){
   var linhas=txt.split('\n');if(linhas.length<2)return[];
   var cols=parseCSVLine(linhas[0]);var idx={};cols.forEach(function(c,i){idx[n(c)]=i;});
   var fc=function(){var a=Array.prototype.slice.call(arguments);var fb=typeof a[a.length-1]==='number'?a.pop():-1;var r=findCol.apply(null,[idx].concat(a));return r>=0?r:fb;};
-  var C={estado:fc('estado',0),dataPag:fc('data de pagamento',1),status:fc('status',2),dataVenc:fc('data de vencimento original',3),valOrig:fc('valor original',4),valPago:fc('valor pago',5),idCont:fc('id do contrato',6),tipoVeic:fc('tipo veiculo','tipo ve\u00edculo',7),tipoUso:fc('tipo de uso veiculo','tipo de uso ve\u00edculo',8),regional:fc('regional',9),consultor:fc('consultor',10)};
+  /* Headers confirmados (v6): Estado, Data de Pagamento, Status, Data de vencimento original,
+     Valor Original, Valor Pago, Id do contrato, Data de vencimento, Tipo veiculo,
+     Tipo de uso veiculo, Regional, Consultor, Data Finalizacao Vistoria, Dia vencimento */
+  var C={estado:fc('estado',0),dataPag:fc('data de pagamento',1),status:fc('status',2),dataVenc:fc('data de vencimento original',3),valOrig:fc('valor original',4),valPago:fc('valor pago',5),idCont:fc('id do contrato',6),dataVenc2:fc('data de vencimento',-1),tipoVeic:fc('tipo veiculo','tipo ve\u00edculo',8),tipoUso:fc('tipo de uso veiculo','tipo de uso ve\u00edculo',9),regional:fc('regional',10),consultor:fc('consultor',11),diaVenc:fc('dia vencimento',13)};
   var rows=[];
-  for(var li=1;li<linhas.length;li++){if(!linhas[li].trim())continue;var c=parseCSVLine(linhas[li]);if(c.length<3)continue;var st=(C.status>=0&&C.status<c.length)?(c[C.status]||'').trim():'';if(!st)continue;rows.push({status:st,valorOriginal:C.valOrig>=0?pv(c[C.valOrig]):0,valorPago:C.valPago>=0?pv(c[C.valPago]):0,idContrato:C.idCont>=0?(c[C.idCont]||'').trim():'',tipoVeiculo:C.tipoVeic>=0?(c[C.tipoVeic]||'').trim().toUpperCase():'',tipoUso:C.tipoUso>=0?(c[C.tipoUso]||'').trim():'',estado:C.estado>=0?(c[C.estado]||'').trim().toUpperCase():'',dataPag:C.dataPag>=0?(c[C.dataPag]||'').trim():'',dataVenc:C.dataVenc>=0?(c[C.dataVenc]||'').trim():'',regional:C.regional>=0?(c[C.regional]||'').trim():'',consultor:C.consultor>=0?(c[C.consultor]||'').trim():''});}
+  for(var li=1;li<linhas.length;li++){if(!linhas[li].trim())continue;var c=parseCSVLine(linhas[li]);if(c.length<3)continue;var st=(C.status>=0&&C.status<c.length)?(c[C.status]||'').trim():'';if(!st)continue;rows.push({status:st,valorOriginal:C.valOrig>=0?pv(c[C.valOrig]):0,valorPago:C.valPago>=0?pv(c[C.valPago]):0,idContrato:C.idCont>=0?(c[C.idCont]||'').trim():'',tipoVeiculo:C.tipoVeic>=0?(c[C.tipoVeic]||'').trim().toUpperCase():'',tipoUso:C.tipoUso>=0?(c[C.tipoUso]||'').trim():'',estado:C.estado>=0?(c[C.estado]||'').trim().toUpperCase():'',dataPag:C.dataPag>=0?(c[C.dataPag]||'').trim():'',dataVenc:C.dataVenc>=0?(c[C.dataVenc]||'').trim():'',regional:C.regional>=0?(c[C.regional]||'').trim():'',consultor:C.consultor>=0?(c[C.consultor]||'').trim():'',diaVenc:C.diaVenc>=0?parseInt(c[C.diaVenc])||0:0});}
   return rows;
 }
 function parseCancelados(txt){
@@ -256,13 +259,21 @@ function isStatusAberto(s){var ns=n(s);return ns==='vencido'||ns==='a vencer'||n
 function isStatusAVencer(s){var ns=n(s);return ns==='a vencer'||ns.includes('a vencer');}
 function statusLabel(s){return isStatusPago(s)?'Pago':s;}
 
+/* Regionais classificadas como INTERNO */
+var REGIONAIS_INTERNAS=['matriz | rio de janeiro -rj','migracao - sindicato','migra\u00e7\u00e3o - sindicato','regional - robocop- sindicato','sindicato- rio de janeiro - taxistas','sindicato- rio de janeiro - t\u00e1xistas','taxi rio','totalben associacao de beneficios','totalben associa\u00e7\u00e3o de benef\u00edcios'];
+
+function ehInterno(reg){var nr=n(reg);return REGIONAIS_INTERNAS.some(function(k){return nr===k||nr.includes(k);});}
+
 function processar(rows,cancelados){
   var totBol=0,totPago=0,totAberto=0,ids=new Set();
   var totDescN=0,cntDescN=0,somaOrigDescN=0,totDesc50=0,cntDesc50=0,somaOrigDesc50=0;
   var cntVencido=0,total=rows.length,porDia={};
   var carros=0,motos=0,caminhoes=0,usoP=0,usoT=0,usoPr=0;
+  var valP=0,valT=0,valPr=0,valMoto=0; /* para ticket medio */
   var porEstado={},porStatus={};
   var timing={antes:0,noDia:0,ate5:0,ate10:0,ate20:0,ate30:0,mais30:0},timingTotal=0;
+  /* Regionais */
+  var regInterno=0,regExterno=0,porRegional={};
   rows.forEach(function(r){
     totBol+=r.valorOriginal;if(r.idContrato)ids.add(r.idContrato);
     var lbl=statusLabel(r.status);porStatus[lbl]=(porStatus[lbl]||0)+1;
@@ -271,18 +282,34 @@ function processar(rows,cancelados){
     if(isStatusVencido(r.status))cntVencido++;
     if(isStatusPago(r.status)&&r.dataPag){var dpObj=parseDate(r.dataPag);if(dpObj){var dk=dpObj.getFullYear()+'-'+String(dpObj.getMonth()+1).padStart(2,'0')+'-'+String(dpObj.getDate()).padStart(2,'0');porDia[dk]=(porDia[dk]||0)+1;}}
     if(isStatusPago(r.status)&&r.dataPag&&r.dataVenc){var dp=parseDate(r.dataPag);var dv=parseDate(r.dataVenc);if(dp&&dv){var diff=diffDays(dp,dv);timingTotal++;if(diff<0)timing.antes++;else if(diff===0)timing.noDia++;else if(diff<=5)timing.ate5++;else if(diff<=10)timing.ate10++;else if(diff<=20)timing.ate20++;else if(diff<=30)timing.ate30++;else timing.mais30++;}}
-    var tv=r.tipoVeiculo;if(tv.includes('MOTO'))motos++;else if(tv.includes('CAMINHA')||tv.includes('CAMINHAO'))caminhoes++;else carros++;
-    var tu=n(r.tipoUso);if(tu.includes('taxi'))usoT++;else if(tu.includes('profiss')||tu.includes('aplic'))usoPr++;else usoP++;
+    /* Frota + ticket medio por tipo */
+    var tv=r.tipoVeiculo;var tu=n(r.tipoUso);
+    if(tv.includes('MOTO')){motos++;valMoto+=r.valorOriginal;}
+    else if(tv.includes('CAMINHA')||tv.includes('CAMINHAO')){caminhoes++;}
+    else{carros++;if(tu.includes('taxi')){usoT++;valT+=r.valorOriginal;}else if(tu.includes('profiss')||tu.includes('aplic')){usoPr++;valPr+=r.valorOriginal;}else{usoP++;valP+=r.valorOriginal;}}
     if(r.estado)porEstado[r.estado]=(porEstado[r.estado]||0)+1;
+    /* Regional */
+    if(r.regional){
+      if(ehInterno(r.regional))regInterno++;else regExterno++;
+      porRegional[r.regional]=(porRegional[r.regional]||0)+1;
+    }
   });
-  var porVencimento={};rows.forEach(function(r){if(r.dataVenc){var dv=parseDate(r.dataVenc);if(dv){var dia=dv.getDate();porVencimento[dia]=(porVencimento[dia]||0)+1;}}});
+  /* Vencimento: usar coluna diaVenc (nova) */
+  var porVencimento={};rows.forEach(function(r){if(r.diaVenc>0){porVencimento[r.diaVenc]=(porVencimento[r.diaVenc]||0)+1;}else if(r.dataVenc){var dv=parseDate(r.dataVenc);if(dv){var dia=dv.getDate();porVencimento[dia]=(porVencimento[dia]||0)+1;}}});
   var qtdSeg=ids.size,totCan=cancelados.length;
   var inad=total>0?(cntVencido/total)*100:0;
   var churn=total>0?((cntVencido+totCan)/total)*100:0;
   var metaChurn=3,vMax=Math.floor(metaChurn/100*total)-totCan;if(vMax<0)vMax=0;
   var bolMeta=Math.max(0,cntVencido-vMax);
   var descPctN=somaOrigDescN>0?(totDescN/somaOrigDescN)*100:0;
-  return{totBol:totBol,totPago:totPago,totAberto:totAberto,qtdSeg:qtdSeg,totDescN:totDescN,descPctN:descPctN,cntDescN:cntDescN,totDesc50:totDesc50,cntDesc50:cntDesc50,somaOrigDesc50:somaOrigDesc50,totCan:totCan,cntVencido:cntVencido,total:total,inad:inad,churn:churn,metaChurn:metaChurn,bolMeta:bolMeta,carros:carros,motos:motos,caminhoes:caminhoes,usoP:usoP,usoT:usoT,usoPr:usoPr,porEstado:Object.entries(porEstado).sort(function(a,b){return b[1]-a[1];}),porDia:porDia,porStatus:porStatus,timing:timing,timingTotal:timingTotal,porVencimento:porVencimento};
+  /* Ticket medio por tipo */
+  var ticketP=usoP>0?valP/usoP:0;
+  var ticketT=usoT>0?valT/usoT:0;
+  var ticketPr=usoPr>0?valPr/usoPr:0;
+  var ticketMoto=motos>0?valMoto/motos:0;
+  /* Regionais sorted */
+  var regSort=Object.entries(porRegional).sort(function(a,b){return b[1]-a[1];});
+  return{totBol:totBol,totPago:totPago,totAberto:totAberto,qtdSeg:qtdSeg,totDescN:totDescN,descPctN:descPctN,cntDescN:cntDescN,totDesc50:totDesc50,cntDesc50:cntDesc50,somaOrigDesc50:somaOrigDesc50,totCan:totCan,cntVencido:cntVencido,total:total,inad:inad,churn:churn,metaChurn:metaChurn,bolMeta:bolMeta,carros:carros,motos:motos,caminhoes:caminhoes,usoP:usoP,usoT:usoT,usoPr:usoPr,ticketP:ticketP,ticketT:ticketT,ticketPr:ticketPr,ticketMoto:ticketMoto,regInterno:regInterno,regExterno:regExterno,porRegional:regSort,porEstado:Object.entries(porEstado).sort(function(a,b){return b[1]-a[1];}),porDia:porDia,porStatus:porStatus,timing:timing,timingTotal:timingTotal,porVencimento:porVencimento};
 }
 
 /* ─── Charts ─── */
@@ -376,10 +403,27 @@ function render(d){
     '</div>'+
     '<div class="g2 stretch">'+
       '<div class="card"><div class="ctit">Frota &mdash; Tipo de ve\u00EDculo</div><div style="display:flex;gap:12px;margin-bottom:8px"><div class="eqi" style="background:#EEEEFF;flex:1"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Carros</span><div style="text-align:right"><div class="eqv" style="color:var(--roxo)">'+fN(d.carros)+'</div><div class="eqval" style="color:var(--roxo)">'+cPct+'%</div></div></div><div class="eqi" style="background:#FDE8FD;flex:1"><span class="eqdot" style="background:#8B1A90"></span><span class="eqnom" style="color:#8B1A90">Motos</span><div style="text-align:right"><div class="eqv" style="color:#8B1A90">'+fN(d.motos)+'</div><div class="eqval" style="color:#8B1A90">'+mPct+'%</div></div></div></div>'+(d.caminhoes>0?'<div class="eqi" style="background:#F6FBDA"><span class="eqdot" style="background:#5C6200"></span><span class="eqnom" style="color:#5C6200">Caminh\u00F5es</span><div class="eqv" style="color:#5C6200">'+fN(d.caminhoes)+'</div></div>':'')+'</div>'+
-      '<div class="card"><div class="ctit">Carros &mdash; Tipo de uso</div><div class="eqi" style="background:#E0FDF6;margin-bottom:6px"><span class="eqdot" style="background:#0A6B54"></span><span class="eqnom" style="color:#0A6B54">Particular</span><div class="eqv" style="color:#0A6B54">'+fN(d.usoP)+'</div></div><div class="eqi" style="background:#FFF4E0;margin-bottom:6px"><span class="eqdot" style="background:#C08A00"></span><span class="eqnom" style="color:#C08A00">T\u00E1xi</span><div class="eqv" style="color:#C08A00">'+fN(d.usoT)+'</div></div><div class="eqi" style="background:#EEEEFF"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Uso Profissional</span><div class="eqv" style="color:var(--roxo)">'+fN(d.usoPr)+'</div></div></div>'+
+      '<div class="card"><div class="ctit">Carros &mdash; Tipo de uso + Ticket M\u00E9dio</div>'+
+        '<div class="eqi" style="background:#E0FDF6;margin-bottom:6px"><span class="eqdot" style="background:#0A6B54"></span><span class="eqnom" style="color:#0A6B54">Particular</span><div style="text-align:right"><div class="eqv" style="color:#0A6B54">'+fN(d.usoP)+'</div><div class="eqval" style="color:#0A6B54">Ticket: '+fR(d.ticketP)+'</div></div></div>'+
+        '<div class="eqi" style="background:#FFF4E0;margin-bottom:6px"><span class="eqdot" style="background:#C08A00"></span><span class="eqnom" style="color:#C08A00">T\u00E1xi</span><div style="text-align:right"><div class="eqv" style="color:#C08A00">'+fN(d.usoT)+'</div><div class="eqval" style="color:#C08A00">Ticket: '+fR(d.ticketT)+'</div></div></div>'+
+        '<div class="eqi" style="background:#EEEEFF;margin-bottom:6px"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Uso Profissional</span><div style="text-align:right"><div class="eqv" style="color:var(--roxo)">'+fN(d.usoPr)+'</div><div class="eqval" style="color:var(--roxo)">Ticket: '+fR(d.ticketPr)+'</div></div></div>'+
+        '<div class="eqi" style="background:#FDE8FD"><span class="eqdot" style="background:#8B1A90"></span><span class="eqnom" style="color:#8B1A90">Moto</span><div style="text-align:right"><div class="eqv" style="color:#8B1A90">'+fN(d.motos)+'</div><div class="eqval" style="color:#8B1A90">Ticket: '+fR(d.ticketMoto)+'</div></div></div>'+
+      '</div>'+
     '</div>'+
     '<div class="card" style="margin-bottom:14px"><div class="ctit">Pagamentos por dia &mdash; '+esc(displayMes)+' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(totalPgDia)+' pagamentos)</span></div><div class="chart-legend"><span style="--c:#93ADFC" class="lg-ref">M\u00EAs da refer\u00EAncia</span><span style="--c:#5353E9" class="lg-venc">M\u00EAs do vencimento</span><span style="--c:#f39c12" class="lg-prazo">Prazo (at\u00E9 dia 15)</span></div><div class="grafico-diario-wrap"><canvas id="gcDiario"></canvas></div></div>'+
     '<div class="card" style="margin-bottom:14px"><div class="ctit">Prazo de pagamento vs vencimento'+(d.timingTotal>0?' <span style="font-weight:400;color:#aaa;margin-left:8px">('+fN(d.timingTotal)+' boletos)</span>':'')+'</div><div class="timing-wrap"><canvas id="gcTiming"></canvas></div></div>'+
+    /* Regional: Interno vs Externo */
+    '<div class="g2 stretch">'+
+      '<div class="card"><div class="ctit">Regional &mdash; Interno vs Externo</div>'+
+        '<div style="display:flex;gap:12px;margin-bottom:12px">'+
+          '<div class="eqi" style="background:rgba(83,83,233,.08);flex:1"><span class="eqdot" style="background:var(--roxo)"></span><span class="eqnom" style="color:var(--roxo)">Interno</span><div class="eqv" style="color:var(--roxo)">'+fN(d.regInterno)+'</div></div>'+
+          '<div class="eqi" style="background:rgba(10,107,84,.08);flex:1"><span class="eqdot" style="background:#0A6B54"></span><span class="eqnom" style="color:#0A6B54">Externo</span><div class="eqv" style="color:#0A6B54">'+fN(d.regExterno)+'</div></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="card"><div class="ctit">Itens por regional</div>'+
+        (function(){var rh='';d.porRegional.slice(0,15).forEach(function(e){var maxR=d.porRegional[0][1]||1;var pct=Math.round(e[1]/maxR*100);var cor=ehInterno(e[0])?'var(--roxo)':'#0A6B54';rh+='<div class="bar-row"><div class="bar-label" style="font-size:10px;min-width:auto;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:'+cor+'">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div><div class="bar-count">'+fN(e[1])+'</div></div>';});return rh;})()+
+      '</div>'+
+    '</div>'+
     '<div class="g2 stretch">'+
       '<div class="card"><div class="ctit">Descontos concedidos</div><div style="font-size:26px;font-weight:800;color:var(--roxo);margin-bottom:4px">'+fR(d.totDescN)+'</div><div style="font-size:11px;color:var(--sub);margin-bottom:10px">em '+fN(d.cntDescN)+' boletos</div><div style="display:inline-block;background:rgba(83,83,233,.06);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:600;color:var(--roxo)">'+fPct(d.descPctN)+' desconto m\u00E9dio</div></div>'+
       '<div class="desc50-card"><div class="desc50-lbl">Segurados com 50% de desconto</div><div class="desc50-val">'+fN(d.cntDesc50)+' segurados</div><div class="desc50-sub">Desconto total: '+fR(d.totDesc50)+'</div><div class="desc50-sub" style="margin-top:3px">Valor original: '+fR(d.somaOrigDesc50)+'</div></div>'+
