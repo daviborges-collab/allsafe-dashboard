@@ -34,7 +34,7 @@ select.mes-sel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,25
 .page{max-width:1320px;margin:0 auto;padding:1.25rem 1.5rem 3rem}
 
 /* ── KPI ROW ── */
-.krow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem}
+.krow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem}
 .kpi{border-radius:16px;padding:1.25rem 1.5rem;position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s}
 .kpi:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(33,11,78,.12)}
 .kd{background:var(--dark)}.kr{background:var(--roxo)}.km{background:var(--menta)}.kv{background:linear-gradient(135deg,#C0392B,#E74C3C)}
@@ -158,16 +158,15 @@ select.mes-sel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,25
 
 // ── DATA ──
 var DATA = {
-  total: 3652519.65,
-  lancamentos: 721,
-  centros: 27,
+  total: 2104795.50,
+  lancamentos: 621,
+  centros: 26,
   categorias: 87,
   porCentro: [
-    {nome:"TRASNFERÊNCIA ENTRE EMPRESAS",valor:1547724.15,qtd:100,cats:[{nome:"TRANSFERÊNCIA ENTRE EMPRESAS",valor:1547724.15,qtd:100}]},
     {nome:"OPERAÇÃO",valor:478143.38,qtd:80,cats:[{nome:"ARUANA - MENSALIDADES",valor:172832.85,qtd:60},{nome:"RASTREADOR",valor:122147.69,qtd:8},{nome:"CUSTO PURO DE REBOQUE",valor:105440.82,qtd:3},{nome:"OUTROS",valor:46077.00,qtd:4},{nome:"CENTRAL ASSISTENCIA 24H",valor:23795.72,qtd:1},{nome:"CLUBE DE VANTAGEM",valor:6799.30,qtd:3},{nome:"ARUANA - ADESÕES",valor:1050.00,qtd:1}]},
     {nome:"SEGURADORA",valor:368345.57,qtd:4,cats:[{nome:"PRÊMIO",valor:353714.26,qtd:2},{nome:"LICENÇA MENSAL",valor:9631.31,qtd:1},{nome:"AUDITORIA",valor:5000.00,qtd:1}]},
     {nome:"CUSTOS BANCÁRIOS",valor:252599.27,qtd:94,cats:[{nome:"CAPITAL DE GIRO",valor:120170.75,qtd:7},{nome:"TÍTULO DE CAPITALIZAÇÃO",valor:100000.00,qtd:1},{nome:"ENCARGOS",valor:25276.48,qtd:6},{nome:"OUTRAS TAXAS",valor:5213.58,qtd:12},{nome:"PIX/DOC/TED",valor:1938.46,qtd:68}]},
-    {nome:"FOLHA",valor:176300.62,qtd:54,cats:[{nome:"COMERCIAL",valor:37716.22,qtd:8},{nome:"ADIANTAMENTO DE SÓCIO",valor:32500.00,qtd:2},{nome:"FINANCEIRO",valor:24640.09,qtd:6},{nome:"EVENTOS",valor:22834.90,qtd:5},{nome:"ADMNISTRATIVO",valor:16105.53,qtd:7},{nome:"MKT",valor:15884.00,qtd:2},{nome:"TAXI",valor:12310.16,qtd:6},{nome:"COBRANÇA",valor:3387.42,qtd:5},{nome:"ATAS",valor:3000.00,qtd:2},{nome:"RH",valor:2929.14,qtd:3},{nome:"EXPANSÃO",valor:1761.75,qtd:3},{nome:"CADASTRO",valor:1729.33,qtd:3},{nome:"RASTREADOR",valor:1502.08,qtd:2}]},
+    {nome:"FOLHA",valor:213889.34,qtd:77,cats:[{nome:"COMERCIAL",valor:37716.22,qtd:8},{nome:"ADIANTAMENTO DE SÓCIO",valor:32500.00,qtd:2},{nome:"FINANCEIRO",valor:24640.09,qtd:6},{nome:"EVENTOS",valor:22834.90,qtd:5},{nome:"ADMNISTRATIVO",valor:16105.53,qtd:7},{nome:"MKT",valor:15884.00,qtd:2},{nome:"INSS/FGTS",valor:14272.52,qtd:6},{nome:"TAXI",valor:12310.16,qtd:6},{nome:"PLANO DE SAÚDE",valor:8313.76,qtd:2},{nome:"VALE REFEIÇÃO",valor:8236.00,qtd:2},{nome:"VALE TRANSPORTE",valor:5046.40,qtd:8},{nome:"COBRANÇA",valor:3387.42,qtd:5},{nome:"ATAS",valor:3000.00,qtd:2},{nome:"RH",valor:2929.14,qtd:3},{nome:"EXPANSÃO",valor:1761.75,qtd:3},{nome:"CADASTRO",valor:1729.33,qtd:3},{nome:"RASTREADOR",valor:1502.08,qtd:2},{nome:"PLANO ODONTO",valor:1026.64,qtd:2},{nome:"MOBILIDADE",valor:628.00,qtd:2},{nome:"OUTROS BENEFÍCIOS",valor:65.40,qtd:1}]},
     {nome:"INDENIZAÇÕES",valor:134964.39,qtd:4,cats:[{nome:"INDENIZAÇÕES",valor:134964.39,qtd:4}]},
     {nome:"EXTRAS",valor:118957.06,qtd:49,cats:[{nome:"CARTÃO DE CRÉDITO",valor:84792.87,qtd:8},{nome:"CUSTOS COM VIAGEM",valor:16770.88,qtd:15},{nome:"SERVIÇOS EXTRAS",valor:9758.86,qtd:15},{nome:"CONFRATERNIZAÇÕES",valor:6130.07,qtd:6},{nome:"OUTRAS TAXAS",valor:650.00,qtd:1},{nome:"REEMBOLSOS",valor:483.92,qtd:3},{nome:"CURSOS",valor:370.46,qtd:1}]},
     {nome:"COMERCIAL",valor:103106.67,qtd:14,cats:[{nome:"RECORRENTE EXTERNO",valor:62468.93,qtd:4},{nome:"DISPAROS DE WHATSAPP",valor:12018.02,qtd:4},{nome:"REPASSE ADESAO",valor:10367.72,qtd:2},{nome:"COMISSÕES INTERNAS",valor:9752.00,qtd:2},{nome:"CAMPANHAS DE VENDAS",valor:8000.00,qtd:1},{nome:"MATERIAIS DE VENDA",valor:500.00,qtd:1}]},
@@ -176,7 +175,6 @@ var DATA = {
     {nome:"REPARAÇÕES",valor:52287.36,qtd:46,cats:[{nome:"OFICINA",valor:33918.35,qtd:16},{nome:"COMPRA DE PEÇAS",valor:17463.83,qtd:28},{nome:"REGULAGENS",valor:905.18,qtd:2}]},
     {nome:"REEMBOLSO SPLIT",valor:42250.56,qtd:32,cats:[{nome:"PEÇAS",valor:21297.65,qtd:31},{nome:"INDENIZAÇÕES",valor:20952.91,qtd:1}]},
     {nome:"OUTROS SINISTROS",valor:40541.36,qtd:47,cats:[{nome:"SINDICANCIAS",valor:15100.00,qtd:1},{nome:"RENDA GARANTIDA",valor:11700.00,qtd:3},{nome:"PARABRISA",valor:8031.72,qtd:15},{nome:"FARÓIS/LANTERNAS",valor:5159.64,qtd:24},{nome:"VIDROS",valor:370.00,qtd:1},{nome:"MÃO DE OBRA PARA TROCA",valor:180.00,qtd:3}]},
-    {nome:"ENCARGOS",valor:37588.72,qtd:23,cats:[{nome:"INSS/FGTS",valor:14272.52,qtd:6},{nome:"PLANO DE SAÚDE",valor:8313.76,qtd:2},{nome:"VALE REFEIÇÃO",valor:8236.00,qtd:2},{nome:"VALE TRANSPORTE",valor:5046.40,qtd:8},{nome:"PLANO ODONTO",valor:1026.64,qtd:2},{nome:"MOBILIDADE",valor:628.00,qtd:2},{nome:"OUTROS BENEFÍCIOS",valor:65.40,qtd:1}]},
     {nome:"ALUGUEL/TAXAS",valor:34634.39,qtd:10,cats:[{nome:"ALUGUEL",valor:34634.39,qtd:10}]},
     {nome:"PROCESSOS JUDICIAIS",valor:31786.13,qtd:14,cats:[{nome:"ACORDOS",valor:23510.45,qtd:6},{nome:"CONDENAÇÕES",valor:8005.56,qtd:7},{nome:"TAXAS PARA RECURSOS",valor:270.12,qtd:1}]},
     {nome:"CARRO RESERVA",valor:24321.46,qtd:7,cats:[{nome:"LOCAÇÃO",valor:18167.48,qtd:5},{nome:"PARCELA DE FINANCIAMENTO",valor:5653.98,qtd:1},{nome:"REEMBOLSO DE CAUÇÃO",valor:500.00,qtd:1}]},
@@ -229,44 +227,43 @@ function render(){
 
 function renderResumo(root){
   var d=DATA;
-  // Excluir transferência entre empresas para análise operacional
-  var opTotal=d.total-d.porCentro[0].valor;
-  var opQtd=d.lancamentos-d.porCentro[0].qtd;
-  var top5=d.porCentro.slice(1,6);
+  var opTotal=d.total;
+  var opQtd=d.lancamentos;
+  var top5=d.porCentro.slice(0,5);
 
   // Macro categorias
   var sinistros=0,adm=0,pessoal=0,comercial=0,financeiro=0,operacao=0;
   d.porCentro.forEach(function(c){
     var nm=c.nome.toUpperCase();
     if(['INDENIZAÇÕES','REPARAÇÕES','REEMBOLSO SPLIT','OUTROS SINISTROS','CARRO RESERVA'].indexOf(nm)>=0) sinistros+=c.valor;
-    else if(['FOLHA','ENCARGOS'].indexOf(nm)>=0) pessoal+=c.valor;
+    else if(nm==='FOLHA') pessoal+=c.valor;
     else if(['COMERCIAL','MKT'].indexOf(nm)>=0) comercial+=c.valor;
     else if(['CUSTOS BANCÁRIOS','FINANCEIRAS','BOLETOS','CARTÃO DE CRÉDITO'].indexOf(nm)>=0) financeiro+=c.valor;
     else if(['OPERAÇÃO','SEGURADORA','OPERACIONAL ADM'].indexOf(nm)>=0) operacao+=c.valor;
-    else if(nm!=='TRASNFERÊNCIA ENTRE EMPRESAS') adm+=c.valor;
+    else adm+=c.valor;
   });
 
   var kpis='<div class="krow">'+
     '<div class="kpi kd"><div class="klbl">Total despesas</div><div class="kval">'+fR(d.total)+'</div><div class="ksub">'+fN(d.lancamentos)+' lançamentos</div><div class="kdeco">💰</div></div>'+
-    '<div class="kpi kr"><div class="klbl">Operacional (s/ transf.)</div><div class="kval">'+fR(opTotal)+'</div><div class="ksub">'+fN(opQtd)+' lançamentos</div><div class="kdeco">📊</div></div>'+
+    '<div class="kpi kr"><div class="klbl">Maior centro de custo</div><div class="kval" style="font-size:16px">'+esc(d.porCentro[0].nome)+'</div><div class="ksub">'+fR(d.porCentro[0].valor)+' ('+pct(d.porCentro[0].valor,d.total)+'%)</div><div class="kdeco">📊</div></div>'+
     '<div class="kpi km"><div class="klbl">Centros de custo</div><div class="kval">'+d.centros+'</div><div class="ksub">'+d.categorias+' categorias</div><div class="kdeco">📋</div></div>'+
-    '<div class="kpi kv"><div class="klbl">Ticket médio</div><div class="kval">'+fR(d.total/d.lancamentos)+'</div><div class="ksub">Por lançamento</div><div class="kdeco">📈</div></div>'+
+
   '</div>';
 
   // Top 5 centros (excl. transferência)
   var top5Html=top5.map(function(c,i){
     var p=pct(c.valor,d.total);
-    return '<div class="centro-item" style="background:'+CORES_BG[i+1]+'">'+
-      '<span class="centro-dot" style="background:'+CORES[i+1]+'"></span>'+
-      '<span class="centro-nome" style="color:'+CORES[i+1]+'">'+esc(c.nome)+'</span>'+
-      '<div class="centro-val"><div class="v" style="color:'+CORES[i+1]+'">'+fR(c.valor)+'</div><div class="p" style="color:'+CORES[i+1]+'">'+p+'% · '+c.qtd+' lanç.</div></div></div>';
+    return '<div class="centro-item" style="background:'+CORES_BG[i]+'">'+
+      '<span class="centro-dot" style="background:'+CORES[i]+'"></span>'+
+      '<span class="centro-nome" style="color:'+CORES[i]+'">'+esc(c.nome)+'</span>'+
+      '<div class="centro-val"><div class="v" style="color:'+CORES[i]+'">'+fR(c.valor)+'</div><div class="p" style="color:'+CORES[i]+'">'+p+'% · '+c.qtd+' lanç.</div></div></div>';
   }).join('');
 
   // Macro breakdown
   var macros=[
     {nome:'Operação + Seguradora',valor:operacao,cor:'#5353E9',ico:'⚙️'},
     {nome:'Sinistros + Reparações',valor:sinistros,cor:'#E74C3C',ico:'🔧'},
-    {nome:'Pessoal + Encargos',valor:pessoal,cor:'#0A6B54',ico:'👥'},
+    {nome:'Folha de Pagamento',valor:pessoal,cor:'#0A6B54',ico:'👥'},
     {nome:'Financeiro + Bancário',valor:financeiro,cor:'#8B1A90',ico:'🏦'},
     {nome:'Comercial + MKT',valor:comercial,cor:'#C25A2B',ico:'📣'},
     {nome:'Administrativo + Outros',valor:adm,cor:'#5C6200',ico:'🏢'}
@@ -282,21 +279,12 @@ function renderResumo(root){
       '<div style="font-size:10px;color:'+m.cor+';opacity:.7">'+p+'%</div></div></div>';
   }).join('');
 
-  // Transferência card
-  var transfHtml='<div class="tendcard" style="margin-bottom:12px">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'+
-    '<div><div style="font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--azul);text-transform:uppercase;margin-bottom:6px">⚠️ Transferências entre empresas</div>'+
-    '<div style="font-size:28px;font-weight:800;color:var(--limao)">'+fR(d.porCentro[0].valor)+'</div>'+
-    '<div style="font-size:11px;color:#5a5a9a">'+d.porCentro[0].qtd+' lançamentos · '+pct(d.porCentro[0].valor,d.total)+'% do total</div></div>'+
-    '<div style="background:rgba(223,244,76,.08);border:1px solid rgba(223,244,76,.15);border-radius:12px;padding:10px 16px;max-width:320px">'+
-    '<div style="font-size:11px;color:var(--menta);font-weight:600;margin-bottom:2px">💡 Nota</div>'+
-    '<div style="font-size:11px;color:#7B8FA8;line-height:1.5">Este centro representa movimentações internas entre empresas do grupo. Os indicadores operacionais abaixo excluem este valor para análise mais precisa.</div>'+
-    '</div></div></div>';
 
-  root.innerHTML=kpis+transfHtml+
+
+  root.innerHTML=kpis+
     '<div class="g2">'+
     '<div class="card"><div class="ctit">Top 5 centros de custo</div>'+top5Html+'</div>'+
-    '<div class="card"><div class="ctit">Visão por macro-área (s/ transferências)</div>'+macroHtml+'</div>'+
+    '<div class="card"><div class="ctit">Visão por macro-área</div>'+macroHtml+'</div>'+
     '</div>'+
     '<div class="card" style="margin-bottom:12px"><div class="ctit">Distribuição por centro de custo</div><div class="cwrap" style="height:'+Math.max(300,DATA.porCentro.length*28)+'px"><canvas id="gcCentros"></canvas></div></div>';
 
@@ -315,19 +303,12 @@ function renderResumo(root){
 
 function renderCentros(root){
   var d=DATA;
-  var filtBtns='<div class="filtro-bar"><button class="filtro-btn'+(FILTRO_CENTRO===null?' on':'')+'" onclick="setCentro(null)">Todos</button>';
-  d.porCentro.forEach(function(c,i){
-    var on=FILTRO_CENTRO===i;
-    var shortName=c.nome.length>18?c.nome.substring(0,18)+'…':c.nome;
-    filtBtns+='<button class="filtro-btn'+(on?' on':'')+'" onclick="setCentro('+i+')">'+esc(shortName)+'</button>';
-  });
-  filtBtns+='</div>';
 
   var content='';
-  var centrosToShow=FILTRO_CENTRO!==null?[d.porCentro[FILTRO_CENTRO]]:(d.porCentro);
+  var centrosToShow=d.porCentro;
   
   centrosToShow.forEach(function(c,idx){
-    var realIdx=FILTRO_CENTRO!==null?FILTRO_CENTRO:idx;
+    var realIdx=idx;
     var cor=CORES[realIdx%CORES.length];
     var p=pct(c.valor,d.total);
     
@@ -347,10 +328,10 @@ function renderCentros(root){
       '<div style="text-align:right"><div style="font-size:22px;font-weight:800;color:'+cor+'">'+fR(c.valor)+'</div>'+
       '<div style="font-size:11px;color:var(--sub)">'+p+'% do total · '+c.qtd+' lanç.</div></div></div>';
 
-    content+=expandCard(c.nome+' — '+fR(c.valor)+' ('+p+'%)',headerCard+tableHtml,'centro-'+realIdx,FILTRO_CENTRO!==null||idx<3);
+    content+=expandCard(c.nome+' — '+fR(c.valor)+' ('+p+'%)',headerCard+tableHtml,'centro-'+realIdx,idx<3);
   });
 
-  root.innerHTML=filtBtns+content;
+  root.innerHTML=content;
 }
 
 function renderCategorias(root){
