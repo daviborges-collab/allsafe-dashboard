@@ -177,7 +177,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
   <div class="header-right">
     <div class="live"><div class="live-dot"></div>Ao vivo</div>
     <span class="ts" id="ts">&mdash;</span>
-    <button class="btn-sm" onclick="loadData()">&#x21bb;</button>
+    <button class="btn-sm" onclick="tentarAtualizarOnline()">&#x21bb;</button>
   </div>
 </div>
 
@@ -1282,35 +1282,53 @@ function exportarDash(){
 }
 
 /* ─── Fetch Data ─── */
-function loadData(){
-  document.getElementById('root').innerHTML='<div class="skel-row"><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div></div><div class="skel-row"><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div></div><div class="skel-row2"><div class="skel-wide"></div><div class="skel-wide"></div></div><div class="skel-tall"></div>';
-  var url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID;
-  fetch(url,{signal:AbortSignal.timeout(20000)}).then(function(r){
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    return r.text();
-  }).then(function(txt){
-    _allRows=parseRows(txt);
-    buildFilters(_allRows);
-    _filteredRows=_allRows.slice();
-    render(processar(_filteredRows,_allRows));
-    document.getElementById('ts').textContent=new Date().toLocaleTimeString('pt-BR');
-  }).catch(function(e){
-    console.warn('Fetch falhou, usando dados embutidos:', e.message);
-    useFallbackData();
-  });
-}
+/* Estratégia: carrega dados embutidos IMEDIATAMENTE, depois tenta atualizar do Google Sheets */
+var _dadosCarregados = false;
 
-function useFallbackData(){
-  if(!FALLBACK_CSV)return;
+function carregarFallback(){
+  if(!FALLBACK_CSV||_dadosCarregados)return;
   _allRows=parseRows(FALLBACK_CSV);
   buildFilters(_allRows);
   _filteredRows=_allRows.slice();
   render(processar(_filteredRows,_allRows));
-  document.getElementById('ts').textContent='Dados embutidos — '+new Date().toLocaleTimeString('pt-BR');
+  document.getElementById('ts').textContent=new Date().toLocaleTimeString('pt-BR');
+  _dadosCarregados=true;
 }
 
-loadData();
-setInterval(loadData,5*60*1000);
+function tentarAtualizarOnline(){
+  var urls=[
+    'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&gid='+GID,
+    'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+GID
+  ];
+  function tryUrl(i){
+    if(i>=urls.length)return;
+    fetch(urls[i],{mode:'cors'}).then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.text();
+    }).then(function(txt){
+      if(!txt||!txt.includes(','))throw new Error('CSV inválido');
+      var rows=parseRows(txt);
+      if(rows.length>0){
+        _allRows=rows;
+        buildFilters(_allRows);
+        applyFilters();
+        document.getElementById('ts').textContent='Atualizado — '+new Date().toLocaleTimeString('pt-BR');
+        console.log('Dados atualizados do Google Sheets ('+rows.length+' linhas)');
+      }
+    }).catch(function(e){
+      console.warn('URL '+i+' falhou: '+e.message);
+      tryUrl(i+1);
+    });
+  }
+  tryUrl(0);
+}
+
+/* Carrega fallback imediatamente */
+carregarFallback();
+/* Tenta atualizar do Google Sheets em background */
+setTimeout(tentarAtualizarOnline, 500);
+/* Tenta atualizar a cada 5 minutos */
+setInterval(tentarAtualizarOnline, 5*60*1000);
 </script>
 </body>
 </html>
