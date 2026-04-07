@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<!-- Prefetch das páginas para zero delay -->
 <link rel="prefetch" href="Comercial/">
 <link rel="prefetch" href="Cobrancas/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,7 +44,7 @@ body{
   position:relative;
 }
 
-/* ── Ambient orbs — Apple-style depth ── */
+/* ── Ambient orbs ── */
 .orb{
   position:fixed;
   border-radius:50%;
@@ -127,7 +126,7 @@ body{
 /* ── Brand text ── */
 .brand{
   text-align:center;
-  margin-bottom:44px;
+  margin-bottom:32px;
   opacity:0;
   animation:textReveal .9s cubic-bezier(.22,1,.36,1) .4s forwards;
 }
@@ -153,6 +152,112 @@ body{
   letter-spacing:.02em;
 }
 
+/* ── Migration banner ── */
+.migration-banner{
+  width:100%;
+  padding:16px 20px;
+  background:linear-gradient(135deg, rgba(200,229,66,.06) 0%, rgba(83,83,233,.06) 100%);
+  border:1px solid rgba(200,229,66,.15);
+  border-radius:14px;
+  margin-bottom:24px;
+  text-align:center;
+  opacity:0;
+  animation:bannerReveal .8s cubic-bezier(.22,1,.36,1) .5s forwards;
+  position:relative;
+  overflow:hidden;
+}
+
+.migration-banner::before{
+  content:'';
+  position:absolute;
+  top:0;left:10%;right:10%;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(200,229,66,.2), transparent);
+}
+
+@keyframes bannerReveal{
+  from{opacity:0;transform:translateY(10px) scale(.98)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+@keyframes pulse{
+  0%,100%{opacity:1}
+  50%{opacity:.6}
+}
+
+.banner-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:rgba(200,229,66,.85);
+  margin-bottom:10px;
+}
+
+.banner-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--lime);
+  animation:pulse 2s ease-in-out infinite;
+}
+
+.banner-text{
+  font-size:13px;
+  font-weight:400;
+  color:rgba(255,255,255,.55);
+  line-height:1.5;
+  margin-bottom:14px;
+}
+
+.banner-text strong{
+  color:rgba(255,255,255,.8);
+  font-weight:600;
+}
+
+.banner-link{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 20px;
+  background:rgba(200,229,66,.1);
+  border:1px solid rgba(200,229,66,.2);
+  border-radius:10px;
+  color:rgba(200,229,66,.9);
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:.01em;
+  text-decoration:none;
+  transition:
+    background .35s ease,
+    border-color .35s ease,
+    transform .35s cubic-bezier(.22,1,.36,1),
+    box-shadow .35s ease;
+}
+
+.banner-link:hover{
+  background:rgba(200,229,66,.15);
+  border-color:rgba(200,229,66,.3);
+  transform:translateY(-1px);
+  box-shadow:0 4px 20px rgba(200,229,66,.1);
+}
+
+.banner-link:active{
+  transform:scale(.97);
+  transition-duration:.1s;
+}
+
+.banner-link-arrow{
+  transition:transform .3s cubic-bezier(.22,1,.36,1);
+}
+
+.banner-link:hover .banner-link-arrow{
+  transform:translateX(3px);
+}
+
 /* ── Navigation grid ── */
 .nav-grid{
   display:grid;
@@ -161,7 +266,7 @@ body{
   width:100%;
 }
 
-/* ── Card button — glass morphism ── */
+/* ── Card button ── */
 .nav-card{
   position:relative;
   display:flex;
@@ -186,18 +291,14 @@ body{
   opacity:0;
 }
 
-/* Staggered entrance */
-.nav-card:nth-child(1){animation:cardReveal .7s cubic-bezier(.22,1,.36,1) .55s forwards}
-.nav-card:nth-child(2){animation:cardReveal .7s cubic-bezier(.22,1,.36,1) .65s forwards}
-.nav-card:nth-child(3){animation:cardReveal .7s cubic-bezier(.22,1,.36,1) .75s forwards}
-.nav-card:nth-child(4){animation:cardReveal .7s cubic-bezier(.22,1,.36,1) .85s forwards}
+.nav-card:nth-child(1){animation:cardReveal .7s cubic-bezier(.22,1,.36,1) .7s forwards}
+.nav-card:nth-child(2){animation:cardReveal .7s cubic-bezier(.22,1,.36,1) .8s forwards}
 
 @keyframes cardReveal{
   from{opacity:0;transform:translateY(16px) scale(.97)}
   to{opacity:1;transform:translateY(0) scale(1)}
 }
 
-/* Shimmer highlight on top edge */
 .nav-card::before{
   content:'';
   position:absolute;
@@ -208,7 +309,6 @@ body{
   transition:opacity .4s ease;
 }
 
-/* Inner glow on hover */
 .nav-card::after{
   content:'';
   position:absolute;
@@ -269,32 +369,24 @@ body{
   transform:translateX(3px);
 }
 
-/* ── Disabled state ── */
-.nav-card.disabled{
-  cursor:default;
-  opacity:.35;
-  pointer-events:none;
+/* ── Deprecation note ── */
+.deprecation-note{
+  margin-top:28px;
+  text-align:center;
+  opacity:0;
+  animation:textReveal .8s cubic-bezier(.22,1,.36,1) 1s forwards;
 }
 
-.card-badge{
-  position:absolute;
-  top:12px;
-  right:12px;
-  font-size:8.5px;
-  font-weight:600;
-  letter-spacing:.07em;
-  text-transform:uppercase;
-  color:rgba(200,229,66,.65);
-  background:rgba(200,229,66,.06);
-  border:1px solid rgba(200,229,66,.1);
-  border-radius:20px;
-  padding:3px 9px;
-  line-height:1.4;
+.deprecation-note p{
+  font-size:11px;
+  font-weight:400;
+  color:rgba(255,255,255,.2);
+  line-height:1.6;
 }
 
 /* ── Footer ── */
 .footer{
-  margin-top:44px;
+  margin-top:28px;
   text-align:center;
   opacity:0;
   animation:textReveal .8s cubic-bezier(.22,1,.36,1) 1.1s forwards;
@@ -324,15 +416,19 @@ body{
   .logo-img{width:68px;height:68px;border-radius:17px}
   .brand h1{font-size:23px}
   .brand p{font-size:12px}
-  .brand{margin-bottom:36px}
+  .brand{margin-bottom:24px}
+  .migration-banner{padding:14px 16px;border-radius:12px;margin-bottom:20px}
+  .banner-text{font-size:12px;margin-bottom:12px}
+  .banner-link{font-size:12px;padding:8px 16px}
   .nav-grid{gap:10px}
   .nav-card{min-height:120px;padding:18px 16px 16px;border-radius:16px}
   .nav-card::after{border-radius:16px}
   .card-icon{font-size:22px}
   .card-label{font-size:13.5px}
   .card-arrow{font-size:12px}
-  .footer{margin-top:32px}
+  .footer{margin-top:24px}
   .footer .quote{font-size:11px}
+  .deprecation-note{margin-top:20px}
 }
 
 @media(max-width:360px){
@@ -342,7 +438,7 @@ body{
   .card-label{font-size:13px}
   .brand h1{font-size:21px}
   .logo-img{width:60px;height:60px;border-radius:15px}
-  .brand{margin-bottom:30px}
+  .brand{margin-bottom:20px}
 }
 
 /* ── Desktop ── */
@@ -350,17 +446,12 @@ body{
   .container{max-width:480px}
   .logo-img{width:88px;height:88px;border-radius:22px}
   .brand h1{font-size:28px}
-  .brand{margin-bottom:52px}
+  .brand{margin-bottom:36px}
   .nav-card{min-height:148px;padding:24px 22px 20px;border-radius:20px}
   .nav-card::after{border-radius:20px}
   .card-icon{font-size:28px}
   .card-label{font-size:15px}
-  .footer{margin-top:52px}
-}
-
-@media(min-height:800px){
-  .brand{margin-bottom:56px}
-  .footer{margin-top:56px}
+  .footer{margin-top:36px}
 }
 
 /* ── Selection ── */
@@ -386,6 +477,22 @@ body{
     <p>Painel de gestão</p>
   </div>
 
+  <!-- Migration banner -->
+  <div class="migration-banner">
+    <div class="banner-badge">
+      <span class="banner-dot"></span>
+      Nova versão disponível
+    </div>
+    <p class="banner-text">
+      Uma <strong>versão mais moderna</strong> do painel já está no ar.<br>
+      Esta página será <strong>desligada em breve</strong>.
+    </p>
+    <a class="banner-link" href="https://autumn-cake-71ca.davi-borges.workers.dev/hub" target="_blank" rel="noopener">
+      Acessar nova versão
+      <span class="banner-link-arrow">→</span>
+    </a>
+  </div>
+
   <nav class="nav-grid">
 
     <a class="nav-card" href="Comercial/">
@@ -404,25 +511,11 @@ body{
       </div>
     </a>
 
-    <div class="nav-card disabled">
-      <span class="card-badge">Em breve</span>
-      <span class="card-icon">🛡️</span>
-      <div class="card-bottom">
-        <span class="card-label">Sinistros</span>
-        <span class="card-arrow">→</span>
-      </div>
-    </div>
-
-    <div class="nav-card disabled">
-      <span class="card-badge">Em breve</span>
-      <span class="card-icon">💰</span>
-      <div class="card-bottom">
-        <span class="card-label">Financeiro</span>
-        <span class="card-arrow">→</span>
-      </div>
-    </div>
-
   </nav>
+
+  <div class="deprecation-note">
+    <p>⚠ Este painel será descontinuado. Migre para a nova versão.</p>
+  </div>
 
   <div class="footer">
     <p class="quote">"Se você pode sonhar, você pode realizar"</p>
